@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+    </body>
+</html>
+<script>
+
+let cnv = document.querySelector("#canvas");
+let ctx = cnv.getContext("2d");
+cnv.height = 1080;
+cnv.width = 1920;
+
+
+cnv.addEventListener("contextmenu", (e)=>{e.preventDefault();}, false);
+
+cnv.addEventListener("pointermove", draw, false);
+
+cnv.addEventListener("pointerup", endpath, false);
+cnv.addEventListener("pointercancle", endpath, false);
+cnv.addEventListener("pointerout", endpath, false);
+cnv.addEventListener("pointerleave", endpath, false);
+
+document.addEventListener("keydown",(e)=>{
+    console.log("keydown",e.keyCode)
+    if (e.keyCode == 90 && e.ctrlKey) {
+        cnv_history_trash.push(cnv_history.pop());
+        ctx.putImageData(cnv_history[cnv_history.length-1],0,0);
+    }
+    if (e.keyCode == 89 && e.ctrlKey) {
+        if (cnv_history_trash.length>0) {
+            cnv_history.push(cnv_history_trash.pop());
+            ctx.putImageData(cnv_history[cnv_history.length-1],0,0);
+        }
+    }
+},false);
+
+function logEvents(e) {
+    console.log(e);
+    return;
+}
+
+var stroke = [];
+var cnv_history = [];
+var cnv_history_trash = [];
+let image = ctx.getImageData(0,0,1920,1080);
+cnv_history.push(image);
+
+function draw(e) {
+    var rect = cnv.getBoundingClientRect();
+    let pointer = {
+        x: (e.clientX-rect.left)/(rect.right-rect.left)*cnv.width,
+        y: (e.clientY-rect.top)/(rect.bottom-rect.top)*cnv.height,
+        tiltX: e.tiltX,
+        tiltY: 0,
+        twist: e.twist,
+        pressure: e.pressure,
+        time: performance.now(),
+        pointerType: e.pointerType,
+    }
+    let bs = stroke[stroke.length-1]??pointer;
+    pointer.speed = Math.sqrt((bs.x-pointer.x)**2+(bs.y-pointer.y)**2)/(pointer.time-bs.time);
+    switch (e.buttons) {
+        case 1:
+            drawpath(pointer);
+            logEvents(pointer);
+        break;
+    }
+}
+
+function drawpath(e) {
+    {
+        stroke.push(e);
+        // ctx.beginPath();
+        // ctx.arc(e.x,e.y,10,0,Math.PI*2)
+        // ctx.stroke();
+    }
+
+    ctx.fillStyle = "rgb(200,50,100,0.05)";
+    ctx.lineCap = "round";
+    if (stroke.length>3) {
+        i = stroke.length-1;
+        let p0 = stroke[i-2];
+        let p1 = stroke[i-1];
+        let p2 = stroke[i];
+        let m1 = midpoint(p0,p1);
+        let m2 = midpoint(p1,p2);
+        drawQuadraticCurve(m1,p1,m2,p0,p1);
+    }
+}
+function endpath(e) {
+    if (stroke.length>2) {
+        let image = ctx.getImageData(0,0,1920,1080);
+        cnv_history.push(image);
+        cnv_history_trash = [];
+        console.log(cnv_history);
+    }
+    stroke = [];
+}
+
+function midpoint(p1,p2) {
+    return {x:(p1.x+p2.x)/2,y:(p1.y+p2.y)/2}
+}
+function lerp(a,b,t) {
+    return a + t*(b-a)
+}
+
+function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2) {
+    for (let t=0;t<=1;t+=0.005) {
+        x = (p0.x-2*p1.x+p2.x)*t*t+(-2*p0.x+2*p1.x)*t+p0.x;
+        y = (p0.y-2*p1.y+p2.y)*t*t+(-2*p0.y+2*p1.y)*t+p0.y;
+        {
+            width1 = 20*lerp(pointer1.pressure,pointer2.pressure,t)/(1.05**lerp(pointer1.speed,pointer2.speed,t)**1.2);
+            let projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
+            width2 = width1*(1+projection_len*5);
+        }
+        ctx.beginPath();
+        ctx.ellipse(x,y,width1,width2,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
+        ctx.fill();
+    }
+}
+</script>
+<style>
+    body {
+        background-color: rgb(0, 0, 0);
+    }
+    canvas {
+        background-color: rgb(255, 255, 255);
+        cursor: crosshair;
+    }
+</style>
