@@ -68,7 +68,7 @@ function draw(e) {
             tiltX: e.pointerType=="pen"?e.tiltX:0,
             tiltY: 0,
             twist: e.pointerType=="pen"?e.tiltY:0,
-            pressure: (e.tangentialPressure+1)/2,
+            pressure: e.pointerType=="pen"?e.pressure:0.5,
             pointerType: e.pointerType,
             speed: speed,
         }
