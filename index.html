@@ -59,19 +59,20 @@ function draw(e) {
     let ns = {x:(e.clientX-rect.left)/(rect.right-rect.left)*cnv.width,y:(e.clientY-rect.top)/(rect.bottom-rect.top)*cnv.height,time:performance.now()}
     let bs = stroke[stroke.length-1]??ns;
     let speed = Math.sqrt((bs.x-ns.x)**2+(bs.y-ns.y)**2)/(ns.time-bs.time);
-    for (e of e.getCoalescedEvents()) {
+    let drawfunc = (e)=>{
        // console.log(e)
         let pointer = {
             x: (e.clientX-rect.left)/(rect.right-rect.left)*cnv.width,
             y: (e.clientY-rect.top)/(rect.bottom-rect.top)*cnv.height,
             time: performance.now(),
-            tiltX: e.tiltX,
+            tiltX: e.pointerType=="pen"?e.tiltX:0,
             tiltY: 0,
-            twist: e.twist+45,
+            twist: e.pointerType=="pen"?e.tiltY:0,
             pressure: (e.tangentialPressure+1)/2,
             pointerType: e.pointerType,
             speed: speed,
         }
+        console.log(pointer)
         switch (e.buttons) {
             case 1:
                 drawpath(pointer);
@@ -79,14 +80,22 @@ function draw(e) {
             break;
         }
     }
+    if (e.getCoalescedEvents) {
+        for (e of e.getCoalescedEvents()) {
+            drawfunc(e);
+        }
+    }
+    else {
+        drawfunc(e);
+    }
 }
 
 function drawpath(e) {
     {
         stroke.push(e);
-        ctx.beginPath();
-        ctx.arc(e.x,e.y,10,0,Math.PI*2)
-        ctx.stroke();
+        // ctx.beginPath();
+        // ctx.arc(e.x,e.y,10,0,Math.PI*2)
+        // ctx.stroke();
        // console.log(e)
     }
 
@@ -124,7 +133,7 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2) {
         x = (p0.x-2*p1.x+p2.x)*t*t+(-2*p0.x+2*p1.x)*t+p0.x;
         y = (p0.y-2*p1.y+p2.y)*t*t+(-2*p0.y+2*p1.y)*t+p0.y;
         {
-            width1 = 10*lerp(pointer1.pressure,pointer2.pressure,t)*2;
+            width1 = 10*lerp(pointer1.pressure,pointer2.pressure,t)**1.2*2;
             let projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
             width2 = width1*(1+projection_len*7);
         }
