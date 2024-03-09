@@ -15,12 +15,19 @@
                     <div class="resizer_splitter"></div>
                     <div class="resizer_content">
                         <input type="color" id="colorpicker">
-                        <input type="range" id="linewidth" min="-15" max="15">
+                        <input type="range" id="linewidth" min="-15" max="30">
                     </div>
                 </div>
             </div>
             <div class="resizer_splitter"></div>
-            <div class="resizer_content"></div>
+            <div class="resizer_content">
+                <div>
+                    <button data-stat="off" class="toggle" id="Eraser">Eraser</button>
+                </div>
+                <div class="singleselectbtn" id="PenType">
+                    <button data-value="ballpoint1">BallPoint</button>
+                </div>
+            </div>
         </div>
     </body>
 </html>
@@ -155,7 +162,7 @@ function draw(e) {
             time: performance.now(),
             tiltX: e.pointerType=="pen"?e.tiltX:0,
             tiltY: 0,
-            twist: e.pointerType=="pen"?e.tiltY:0,
+            twist: e.pointerType=="pen"?e.tiltY:45,
             pressure: e.pointerType=="pen"?e.pressure:0.5,
             pointerType: e.pointerType,
             speed: speed,
@@ -190,8 +197,6 @@ function drawpath(e) {
     let linewidth = 10*1.1**Number(document.querySelector("#linewidth").value);
     console.log(linewidth);
     let color = document.querySelector("#colorpicker").value.slice(1).match(/.{2}/g).map((x)=>{return parseInt(x,16)});
-    ctx.fillStyle = `rgb(${color.join(",")},0.05)`;
-    ctx.lineCap = "round";
     if (stroke.length>3) {
         i = stroke.length-1;
         let p0 = stroke[i-2];
@@ -199,7 +204,7 @@ function drawpath(e) {
         let p2 = stroke[i];
         let m1 = midpoint(p0,p1);
         let m2 = midpoint(p1,p2);
-        drawQuadraticCurve(m1,p1,m2,p0,p1,linewidth);
+        drawQuadraticCurve(m1,p1,m2,p0,p1,linewidth,color);
     }
 }
 function endpath(e) {
@@ -219,21 +224,74 @@ function lerp(a,b,t) {
     return a + t*(b-a)
 }
 
-function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth) {
-    for (let t=0;t<=1;t+=0.005) {
+function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,color) {
+    let penType = (()=>{
+        if (document.querySelector("#Eraser").dataset.stat=="on") {
+            return "eraser"
+        }
+        return document.querySelector("#PenType").dataset.value;
+    })();
+    let span = 0.005*Math.log(linewidth+3);
+    for (let t=0;t<=1;t+=span) {
         x = (p0.x-2*p1.x+p2.x)*t*t+(-2*p0.x+2*p1.x)*t+p0.x;
         y = (p0.y-2*p1.y+p2.y)*t*t+(-2*p0.y+2*p1.y)*t+p0.y;
-        {
-            width1 = linewidth*lerp(pointer1.pressure,pointer2.pressure,t)**1.2*2;
-            let projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
-            width2 = width1*(1+projection_len*7);
+        switch (penType) {
+            case "eraser":
+                {
+                    ctx.globalCompositeOperation = "destination-out";
+                    ctx.fillStyle = `rgb(0,0,0,1)`;
+                    width1 = linewidth*Math.min(lerp(pointer1.pressure,pointer2.pressure,t)*3,1);
+                    let projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
+                    width2 = width1*(1+projection_len*7);
+                    ctx.beginPath();
+                    ctx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
+                    ctx.fill();
+                }
+                break;
+            case "ballpoint1":
+                {
+                    ctx.globalCompositeOperation = "source-over";
+                    ctx.fillStyle = `rgb(${color.join(",")},1)`;
+                    width1 = linewidth*Math.min(lerp(pointer1.pressure,pointer2.pressure,t)*3,1);
+                    let projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
+                    width2 = width1*(1+projection_len*7);
+                    ctx.beginPath();
+                    ctx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
+                    ctx.fill();
+                }
+                break;
         }
-        ctx.beginPath();
-        ctx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
-        ctx.fill();
     }
 }
 
+document.querySelectorAll("#Eraser").forEach((x)=>{ // トグルボタン - 消しゴム選択
+    x.dataset.stat = x.dataset.stat=="on"? "on": "off";
+    x.addEventListener("click",(e)=>{
+        e.target.dataset.stat = e.target.dataset.stat=="off"? "on": "off";
+        document.querySelector("#PenType").dataset.eraser=e.target.dataset.stat;
+    })
+})
+document.querySelectorAll("div.singleselectbtn").forEach((singleselect)=>{ // 一つだけ選べるボタン群 - ペン選択
+    let buttons = [];
+    for (let button of singleselect.querySelectorAll(":scope > button")) {
+        buttons.push(button);
+    }
+    console.log(buttons)
+    for (let button of buttons) {
+        button.addEventListener("click",(e)=>{
+            for (let button of buttons) {
+                button.dataset.stat="off";
+            }
+            button.dataset.stat="on";
+            singleselect.dataset.value=button.dataset.value;
+            document.querySelector("#Eraser").dataset.stat="off"; // 消しゴムは無効化
+            singleselect.dataset.eraser="off"
+        })
+        button.dataset.stat="off";
+    }
+    buttons[0].dataset.stat="on";
+    singleselect.dataset.value=buttons[0].dataset.value;
+})
 </script>
 <style>
     body {
@@ -263,6 +321,31 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth) {
     #linewidth {
         display: inline-block;
         width: 200px;
+    }
+    
+    button {
+        background-color: rgb(240, 238, 238);
+        border: 1px solid white;
+        border-radius: 4px;
+        &:hover {
+            background-color: rgb(228, 218, 218);
+        }
+        &:active {
+            background-color: rgb(202, 196, 196);
+        }
+    }
+
+    .toggle[data-stat="off"], .singleselectbtn > [data-stat="off"], .singleselectbtn[data-eraser="on"] > button {
+        background-color: rgb(124, 115, 115);
+        &:hover {
+            background-color: rgb(133, 124, 124);
+        }
+    }
+    .singleselectbtn[data-eraser="on"] > button[data-stat="on"] {
+        background-color: rgb(172, 151, 151);
+        &:hover {
+            background-color: rgb(181, 172, 172);
+        }
     }
 </style>
 <style>
