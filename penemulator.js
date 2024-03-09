@@ -8,7 +8,6 @@ function* startEmu(data) {
     for (let pointer of JSON.parse(data)) {
         if (pointer.speed==null) {
             endpath();
-            yield;
         }
         if (pointer=="x") { // ctrl+x
             cnv_history_trash.push(cnv_history.pop());
@@ -16,22 +15,30 @@ function* startEmu(data) {
             continue;
         }
         drawpath(pointer,penType);
+        yield;
     }
     endpath();
 }
+var playbackId;
 async function playbackFile(path) {
+    playbackId = Math.floor(Math.random()*100000);
     init();
     let res = await fetch("./pointerTrajectory/"+path,{cache:"reload"});
     let text = await res.text();
     let gen = startEmu(text);
-    let loop = (g)=>{
+    let loop = (g,pbid)=>{
+        if (pbid!=playbackId) {
+            return;
+        }
         let res = g.next();
         if (!res.done) {
-            setTimeout(loop,0,g);
+            setTimeout(loop,0,g,pbid);
         }
         else {
             console.log("done")
         }
     }
-    loop(gen);
+    for (let i=0;i<5;i++) {
+        loop(gen,playbackId);
+    }
 }
