@@ -8,16 +8,101 @@
         <meta property="description" content="Paint software that runs on a web browser">
     </head>
     <body>
-        <canvas id="canvas"></canvas>
+        <div class="resizer_Hcontainer" id="mainarea" data-proportion="15:1">
+            <div class="resizer_content">
+                <div class="resizer_Vcontainer" data-proportion="13:2">
+                    <div class="resizer_content" id="imgOutArea"><canvas id="canvas"></canvas></div>
+                    <div class="resizer_splitter"></div>
+                    <div class="resizer_content">pen tools</div>
+                </div>
+            </div>
+            <div class="resizer_splitter"></div>
+            <div class="resizer_content">pen tools</div>
+        </div>
     </body>
 </html>
 <script>
-
-let cnv = document.querySelector("#canvas");
+function resizer_Vcontainer_addEL (container,framesMin,callback=()=>{}) {
+    container.querySelector(":scope > .resizer_splitter").addEventListener("pointerdown",(e)=>{
+        let resizer = container.querySelector(":scope > .resizer_splitter").getBoundingClientRect();
+        let resizerW = resizer.bottom - resizer.top;
+        let resize = (e)=>{
+            let containerRect = container.getBoundingClientRect();
+            let y = ((n,min,max)=>{if (n<min) {n=min}else if (n>max) {n=max};return n;})(e.y-containerRect.y,framesMin,containerRect.height-resizerW-framesMin);
+            container.querySelectorAll(":scope > .resizer_content")[0].style.flexBasis = `${y}%`;
+            container.querySelectorAll(":scope > .resizer_content")[1].style.flexBasis = `${containerRect.height-resizerW-y}%`;
+            callback();
+        }
+        document.addEventListener("pointermove",resize,false);
+        document.addEventListener("pointerup",()=>{document.removeEventListener("pointermove",resize,false);},false);
+        //e.target.setPointerCapture(e.pointerId);
+    });
+    let p = container.dataset["proportion"].split(":").map((x)=>{return Number(x);});
+    container.querySelectorAll(":scope > .resizer_content")[0].style.flexBasis = `${(p[0]*100/(p[0]+p[1]))}%`;
+    container.querySelectorAll(":scope > .resizer_content")[1].style.flexBasis = `${(p[1]*100/(p[0]+p[1]))}%`;
+}
+function resizer_Hcontainer_addEL (container,framesMin,callback=()=>{}) {
+    container.querySelector(":scope > .resizer_splitter").addEventListener("pointerdown",(e)=>{
+        let resizer = container.querySelector(":scope > .resizer_splitter").getBoundingClientRect();
+        let resizerW = resizer.right - resizer.left;
+        let resize = (e)=>{
+            let containerRect = container.getBoundingClientRect();
+            let x = ((n,min,max)=>{if (n<min) {n=min}else if (n>max) {n=max};return n;})(e.x-containerRect.x,framesMin,containerRect.width-resizerW-framesMin);
+            container.querySelectorAll(":scope > .resizer_content")[0].style.flexBasis = `${x}%`;
+            container.querySelectorAll(":scope > .resizer_content")[1].style.flexBasis = `${containerRect.width-resizerW-x}%`;
+            callback();
+        }
+        document.addEventListener("pointermove",resize,false);
+        document.addEventListener("pointerup",()=>{document.removeEventListener("pointermove",resize,false);},false);
+        //e.target.setPointerCapture(e.pointerId);
+    });
+    let p = container.dataset["proportion"].split(":").map((x)=>{return Number(x);});
+    container.querySelectorAll(":scope > .resizer_content")[0].style.flexBasis = `${(p[0]*100/(p[0]+p[1]))}%`;
+    container.querySelectorAll(":scope > .resizer_content")[1].style.flexBasis = `${(p[1]*100/(p[0]+p[1]))}%`;
+}
+document.querySelectorAll(".resizer_Vcontainer").forEach((x)=>{resizer_Vcontainer_addEL(x,50,resize);})
+document.querySelectorAll(".resizer_Hcontainer").forEach((x)=>{resizer_Hcontainer_addEL(x,50,resize);})
+function resize() {
+    {
+        const dw = imageConfig.width;
+        const dh = imageConfig.height;
+        let rw = 0;let rh = 0;
+        parent = imgOutArea.getBoundingClientRect();
+        let ww = parent.width;
+        let wh = parent.height;
+        let csc = 1
+        hcsc = ww/dw; wcsc = wh/dh;
+        if (hcsc>wcsc) {
+            csc = wcsc; rw = (ww - dw*csc)/2;
+        }
+        else {
+            csc = hcsc; rh = (wh - dh*csc)/2;
+        }
+        cnv.style.marginTop = (rh).toString()+"px";
+        cnv.style.marginBottom = (rh).toString()+"px";
+        cnv.style.marginLeft = (rw).toString()+"px";
+        cnv.style.marginRight = (rw).toString()+"px";
+        cnv.style.transform = "scale("+csc.toString()+","+csc.toString()+")";
+    }
+};
+window.onresize = resize;
+window.onload = ()=>{
+    cnv.height = 1080;
+    cnv.width = 1920;
+    resize();
+};
+</script>
+<script>
+</script>
+<script>
+var imageConfig = {
+    width: 1920,
+    height: 1080
+}
+var cnv = document.getElementById("canvas");
 let ctx = cnv.getContext("2d");
-cnv.height = 1080;
-cnv.width = 1920;
-
+let imgOutArea = document.getElementById("imgOutArea");
+// resize window
 
 cnv.addEventListener("contextmenu", (e)=>{e.preventDefault();}, false);
 
@@ -145,12 +230,72 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2) {
 </script>
 <style>
     body {
-        background-color: rgb(0, 0, 0);
+        background-color: rgb(0, 0, 21);
         position: fixed;
+        padding: 0;
+        margin: 0;
     }
     canvas {
         background-color: rgb(255, 255, 255);
         cursor: crosshair;
         touch-action: none;
+        position: absolute;
+        left: 2px;
+        top: 0;
+        transform-origin: top left;
     }
+    #mainarea {
+        height: 100dvh;
+        width: 100dvw;
+    }
+</style>
+<style>
+
+/* resizer */
+.resizer_Vcontainer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    & > .resizer_content {
+        min-height: 0px;
+        height: 100%;
+        overflow: hidden;
+        padding: 3px;
+    }
+    & > .resizer_splitter {
+        height: 2px;
+        margin: 2px;
+        width: calc(100% - 10px);
+        border-radius: 3px;
+        flex: none;
+        cursor: row-resize;
+        background-color: #7c7c7c;
+    }
+    & > .resizer_splitter:hover {
+        background-color: #acacac;
+    }
+}
+.resizer_Hcontainer {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    & > .resizer_content {
+        min-width: 0px;
+        width: 100%;
+        overflow: hidden;
+        padding: 3px;
+    }
+    & > .resizer_splitter {
+        width: 2px;
+        margin: 2px;
+        height: calc(100% - 10px);
+        border-radius: 3px;
+        flex: none;
+        cursor: col-resize;
+        background-color: #7c7c7c;
+    }
+    & > .resizer_splitter:hover {
+        background-color: #acacac;
+    }
+}
 </style>
