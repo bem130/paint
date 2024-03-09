@@ -27,6 +27,7 @@
                 <div class="singleselectbtn" id="PenType">
                     <button data-value="ballpoint1">BallPoint</button>
                     <button data-value="brush1">Brush</button>
+                    <button data-value="pencil1">Pencil</button>
                 </div>
             </div>
         </div>
@@ -223,16 +224,34 @@ function unfinishedlineloop() {
         let data = tctx.getImageData(0,0,x,y);
         if (penType=="eraser") {ctx.drawImage(tmpcnv,0,0); return;}
         iarr = new Uint8ClampedArray(x * y * 4).fill(0);
-        for (iy = 0; iy < y; iy++) {
-            for (ix = 0; ix < x; ix++) {
-                index = (iy*x+ix)*4; // index of position [ix,iy]
-                if (data.data[index+3]==0) {continue;}
-                c = noise.simplex2(ix/4,iy/4)*0.5+0.7
-                iarr[index+0] = color[0]; // Red
-                iarr[index+1] = color[1]; // Green
-                iarr[index+2] = color[2]; // Blue
-                iarr[index+3] = c*255; // Alpha
-            }
+        switch (penType) {
+            case "ballpoint1":
+            case "brush1":
+                for (iy = 0; iy < y; iy++) {
+                    for (ix = 0; ix < x; ix++) {
+                        index = (iy*x+ix)*4; // index of position [ix,iy]
+                        if (data.data[index+3]==0) {continue;}
+                        c = 1;
+                        iarr[index+0] = color[0]; // Red
+                        iarr[index+1] = color[1]; // Green
+                        iarr[index+2] = color[2]; // Blue
+                        iarr[index+3] = c*255; // Alpha
+                    }
+                }
+                break;
+            case "pencil1":
+                for (iy = 0; iy < y; iy++) {
+                    for (ix = 0; ix < x; ix++) {
+                        index = (iy*x+ix)*4; // index of position [ix,iy]
+                        if (data.data[index+3]==0) {continue;}
+                        c = noise.simplex2(ix,iy)*0.5+noise.simplex2(ix/4,iy/4)*0.5+0.2+data.data[index+0]/255
+                        iarr[index+0] = color[0]; // Red
+                        iarr[index+1] = color[1]; // Green
+                        iarr[index+2] = color[2]; // Blue
+                        iarr[index+3] = c*255; // Alpha
+                    }
+                }
+                break;
         }
         let rcanvas = document.createElement("canvas");
         rcanvas.width = x;
@@ -310,6 +329,18 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
                     width1 = linewidth*Math.min(lerp(pointer1.pressure,pointer2.pressure,t)*3,1);
                     let projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
                     width2 = width1*(1.5+projection_len*7);
+                    tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${lerp(pointer1.twist,pointer2.twist,t)/10},${lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
+                    tctx.beginPath();
+                    tctx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
+                    tctx.fill();
+                }
+                break;
+            case "pencil1":
+                {
+                    tctx.globalCompositeOperation = "";
+                    width1 = linewidth*Math.min(lerp(pointer1.pressure,pointer2.pressure,t)*3,1);
+                    let projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
+                    width2 = width1*(1+projection_len*7);
                     tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${lerp(pointer1.twist,pointer2.twist,t)/10},${lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
                     tctx.beginPath();
                     tctx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
