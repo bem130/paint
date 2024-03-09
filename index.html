@@ -16,6 +16,7 @@
                     <div class="resizer_content">
                         <input type="color" id="colorpicker">
                         <input type="range" id="linewidth" min="-15" max="30" value="0">
+                        <input type="range" id="alpha" min="0" max="255" value="255">
                     </div>
                 </div>
             </div>
@@ -236,6 +237,7 @@ function unfinishedlineloop(loop=false) {
         const x = cnv.width;
         const y = cnv.height;
         const color = document.querySelector("#colorpicker").value.slice(1).match(/.{2}/g).map((x)=>{return parseInt(x,16)});
+        const alpha = Number(document.querySelector("#alpha").value);
     startTime = performance.now();
         const data = tctx.getImageData(0,0,x,y);
     endTime = performance.now();
@@ -252,7 +254,7 @@ function unfinishedlineloop(loop=false) {
                         iarr[index+0] = color[0]; // Red
                         iarr[index+1] = color[1]; // Green
                         iarr[index+2] = color[2]; // Blue
-                        iarr[index+3] = c*255; // Alpha
+                        iarr[index+3] = c*alpha; // Alpha
                     }
                 }
                 break;
@@ -261,11 +263,11 @@ function unfinishedlineloop(loop=false) {
                     for (let ix = 0; ix < x; ix++) {
                         const index = (iy*x+ix)*4; // index of position [ix,iy]
                         if (data.data[index+3]==0) {continue;}
-                        const c = noise.simplex2(ix,iy)*0.3+noise.simplex2(ix/4,iy/4)*0.3+noise.simplex2(ix/10,iy/10)*0.2+noise.simplex2(ix/20,iy/20)*0.2+noise.simplex2(ix/50,iy/50)*0.1+data.data[index+0]/255*1.2
+                        const c = noise.simplex2(ix,iy)*0.3+noise.simplex2(ix/4,iy/4)*0.3+noise.simplex2(ix/10,iy/10)*0.2+noise.simplex2(ix/20,iy/20)*0.2+noise.simplex2(ix/50,iy/50)*0.1+0.5+(data.data[index+0]/255-0.5)*1.5
                         iarr[index+0] = color[0]; // Red
                         iarr[index+1] = color[1]; // Green
                         iarr[index+2] = color[2]; // Blue
-                        iarr[index+3] = c*255; // Alpha
+                        iarr[index+3] = c*alpha; // Alpha
                     }
                 }
                 break;
@@ -278,7 +280,7 @@ function unfinishedlineloop(loop=false) {
         console.log("draw",endTime-startTime);
     }
     if (loop) {
-        setTimeout(unfinishedlineloop,30,true);
+        setTimeout(unfinishedlineloop,10,true);
     }
 }
 
@@ -360,7 +362,7 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
                     tctx.globalCompositeOperation = "lighten";
                     width1 = linewidth*Math.min((lerp(pointer1.pressure,pointer2.pressure,t)*1),1);
                     const projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
-                    width2 = width1*(1+projection_len*3);
+                    width2 = width1*(1+projection_len*3)*Math.min((lerp(pointer1.pressure,pointer2.pressure,t)*1),2);
                     tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${lerp(pointer1.twist,pointer2.twist,t)/10},${lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
                     tctx.beginPath();
                     tctx.ellipse(x,y,width1,width2,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
