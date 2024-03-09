@@ -127,7 +127,7 @@ function init() {
     resize();
     makebase();
     unfinishedlineloop(true);
-    let image = ctx.getImageData(0,0,1920,1080);
+    const image = ctx.getImageData(0,0,1920,1080);
     cnv_history.push(image);
 };
 </script>
@@ -138,13 +138,13 @@ var imageConfig = {
     width: 1920,
     height: 1080
 }
-var basecnv = document.getElementById("base");
-var tmpcnv = document.createElement("canvas");
-var tctx = tmpcnv.getContext("2d");
+const basecnv = document.getElementById("base");
+const tmpcnv = document.createElement("canvas");
+const tctx = tmpcnv.getContext("2d",{willReadFrequently:true});
 
-var cnv = document.getElementById("canvas");
-let ctx = cnv.getContext("2d");
-let imgOutArea = document.getElementById("imgOutArea");
+const cnv = document.getElementById("canvas");
+const ctx = cnv.getContext("2d",{willReadFrequently:true});
+const imgOutArea = document.getElementById("imgOutArea");
 // resize window
 
 cnv.addEventListener("contextmenu", (e)=>{e.preventDefault();}, false);
@@ -184,18 +184,18 @@ var cnv_history_trash = [];
 function draw(e) {
    // console.log(e.getCoalescedEvents())
     var rect = cnv.getBoundingClientRect();
-    let ns = {x:(e.clientX-rect.left)/(rect.right-rect.left)*cnv.width,y:(e.clientY-rect.top)/(rect.bottom-rect.top)*cnv.height,time:performance.now()}
-    let bs = stroke[stroke.length-1]??ns;
-    let speed = Math.sqrt((bs.x-ns.x)**2+(bs.y-ns.y)**2)/(ns.time-bs.time);
-    let penType = (()=>{
+    const ns = {x:(e.clientX-rect.left)/(rect.right-rect.left)*cnv.width,y:(e.clientY-rect.top)/(rect.bottom-rect.top)*cnv.height,time:performance.now()}
+    const bs = stroke[stroke.length-1]??ns;
+    const speed = Math.sqrt((bs.x-ns.x)**2+(bs.y-ns.y)**2)/(ns.time-bs.time);
+    const penType = (()=>{
         if (document.querySelector("#Eraser").dataset.stat=="on") {
             return "eraser"
         }
         return document.querySelector("#PenType").dataset.value;
     })();
-    let drawfunc = (e)=>{
+    const drawfunc = (e)=>{
        // console.log(e)
-        let pointer = {
+        const pointer = {
             x: (e.clientX-rect.left)/(rect.right-rect.left)*cnv.width,
             y: (e.clientY-rect.top)/(rect.bottom-rect.top)*cnv.height,
             time: performance.now(),
@@ -225,7 +225,7 @@ function draw(e) {
 }
 
 function unfinishedlineloop(loop=false) {
-    let penType = (()=>{
+    const penType = (()=>{
         if (document.querySelector("#Eraser").dataset.stat=="on") {
             return "eraser"
         }
@@ -235,18 +235,20 @@ function unfinishedlineloop(loop=false) {
         ctx.putImageData(cnv_history[cnv_history.length-1],0,0);
         const x = cnv.width;
         const y = cnv.height;
-        let color = document.querySelector("#colorpicker").value.slice(1).match(/.{2}/g).map((x)=>{return parseInt(x,16)});
-        let data = tctx.getImageData(0,0,x,y);
+        const color = document.querySelector("#colorpicker").value.slice(1).match(/.{2}/g).map((x)=>{return parseInt(x,16)});
+    startTime = performance.now();
+        const data = tctx.getImageData(0,0,x,y);
+    endTime = performance.now();
         if (penType=="eraser") {ctx.drawImage(tmpcnv,0,0); return;}
-        iarr = new Uint8ClampedArray(x * y * 4).fill(0);
+        const iarr = new Uint8ClampedArray(x * y * 4).fill(0);
         switch (penType) {
             case "ballpoint1":
             case "brush1":
-                for (iy = 0; iy < y; iy++) {
-                    for (ix = 0; ix < x; ix++) {
-                        index = (iy*x+ix)*4; // index of position [ix,iy]
+                for (let iy = 0; iy < y; iy++) {
+                    for (let ix = 0; ix < x; ix++) {
+                        const index = (iy*x+ix)*4; // index of position [ix,iy]
                         if (data.data[index+3]==0) {continue;}
-                        c = 1;
+                        const c = 1;
                         iarr[index+0] = color[0]; // Red
                         iarr[index+1] = color[1]; // Green
                         iarr[index+2] = color[2]; // Blue
@@ -255,11 +257,11 @@ function unfinishedlineloop(loop=false) {
                 }
                 break;
             case "pencil1":
-                for (iy = 0; iy < y; iy++) {
-                    for (ix = 0; ix < x; ix++) {
-                        index = (iy*x+ix)*4; // index of position [ix,iy]
+                for (let iy = 0; iy < y; iy++) {
+                    for (let ix = 0; ix < x; ix++) {
+                        const index = (iy*x+ix)*4; // index of position [ix,iy]
                         if (data.data[index+3]==0) {continue;}
-                        c = noise.simplex2(ix,iy)*0.3+noise.simplex2(ix/4,iy/4)*0.3+noise.simplex2(ix/10,iy/10)*0.2+noise.simplex2(ix/20,iy/20)*0.2+noise.simplex2(ix/50,iy/50)*0.1+data.data[index+0]/255*1.2
+                        const c = noise.simplex2(ix,iy)*0.3+noise.simplex2(ix/4,iy/4)*0.3+noise.simplex2(ix/10,iy/10)*0.2+noise.simplex2(ix/20,iy/20)*0.2+noise.simplex2(ix/50,iy/50)*0.1+data.data[index+0]/255*1.2
                         iarr[index+0] = color[0]; // Red
                         iarr[index+1] = color[1]; // Green
                         iarr[index+2] = color[2]; // Blue
@@ -268,15 +270,15 @@ function unfinishedlineloop(loop=false) {
                 }
                 break;
         }
-        let rcanvas = document.createElement("canvas");
+        const rcanvas = document.createElement("canvas");
         rcanvas.width = x;
         rcanvas.height = y;
-        rcanvas.getContext("2d").putImageData(new ImageData(iarr,x,y),0,0);
+        rcanvas.getContext("2d",{willReadFrequently:true}).putImageData(new ImageData(iarr,x,y),0,0);
         ctx.drawImage(rcanvas,0,0);
-        console.log("draw")
+        console.log("draw",endTime-startTime);
     }
     if (loop) {
-        setTimeout(unfinishedlineloop,1,true);
+        setTimeout(unfinishedlineloop,30,true);
     }
 }
 
@@ -285,21 +287,21 @@ function drawpath(e,penType) {
         stroke.push(e);
     }
 
-    let linewidth = 3*1.1**Number(document.querySelector("#linewidth").value);
+    const linewidth = 3*1.1**Number(document.querySelector("#linewidth").value);
     if (stroke.length>3) {
         i = stroke.length-1;
-        let p0 = stroke[i-2];
-        let p1 = stroke[i-1];
-        let p2 = stroke[i];
-        let m1 = midpoint(p0,p1);
-        let m2 = midpoint(p1,p2);
+        const p0 = stroke[i-2];
+        const p1 = stroke[i-1];
+        const p2 = stroke[i];
+        const m1 = midpoint(p0,p1);
+        const m2 = midpoint(p1,p2);
         drawQuadraticCurve(m1,p1,m2,p0,p1,linewidth,penType);
     }
 }
 function endpath(e) {
     unfinishedlineloop(false);
     if (stroke.length>2) {
-        let image = ctx.getImageData(0,0,imageConfig.width,imageConfig.height);
+        const image = ctx.getImageData(0,0,imageConfig.width,imageConfig.height);
         cnv_history.push(image);
         cnv_history_trash = [];
         tctx.clearRect(0,0,imageConfig.width,imageConfig.height);
@@ -316,7 +318,7 @@ function lerp(a,b,t) {
 }
 
 function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
-    let span = 0.005*Math.log(linewidth+3);
+    const span = 0.005*Math.log(linewidth+2);
     for (let t=0;t<=1;t+=span) {
         x = (p0.x-2*p1.x+p2.x)*t*t+(-2*p0.x+2*p1.x)*t+p0.x;
         y = (p0.y-2*p1.y+p2.y)*t*t+(-2*p0.y+2*p1.y)*t+p0.y;
@@ -345,7 +347,7 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
                 {
                     tctx.globalCompositeOperation = "lighten";
                     width1 = linewidth*lerp(pointer1.pressure,pointer2.pressure,t)**1.4;
-                    let projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
+                    const projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
                     width2 = width1*(1.5+projection_len*7);
                     tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${lerp(pointer1.twist,pointer2.twist,t)/10},${lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
                     tctx.beginPath();
@@ -357,7 +359,7 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
                 {
                     tctx.globalCompositeOperation = "lighten";
                     width1 = linewidth*Math.min((lerp(pointer1.pressure,pointer2.pressure,t)*1),1);
-                    let projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
+                    const projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
                     width2 = width1*(1+projection_len*3);
                     tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${lerp(pointer1.twist,pointer2.twist,t)/10},${lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
                     tctx.beginPath();
@@ -399,11 +401,11 @@ document.querySelectorAll("div.singleselectbtn").forEach((singleselect)=>{ // ä¸
 })
 
 function makebase() {
-    const x = cnv.width;
-    const y = cnv.height;
+    const x = imageConfig.width;
+    const y = imageConfig.height;
     noise = new Noise(Math.random());
-    iarr = new Uint8ClampedArray(x * y * 4);
-    let color = [250,248,245]
+    let iarr = new Uint8ClampedArray(x * y * 4);
+    const color = [250,248,245];
     for (iy = 0; iy < y; iy++) {
         for (ix = 0; ix < x; ix++) {
             c = noise.simplex2(ix*1,iy*1)*10+noise.simplex2(ix/10+10,iy/10+10)*3+noise.simplex2(iy/1000+15,ix/500+15)*10
@@ -414,7 +416,7 @@ function makebase() {
             iarr[index+3] = 255; // Alpha
         }
     }
-    let basectx = basecnv.getContext("2d");
+    const basectx = basecnv.getContext("2d");
     basectx.putImageData(new ImageData(iarr,x,y),0,0);
 }
 
@@ -424,10 +426,10 @@ function copyImage() {
     if (typeof ClipboardItem=="undefined") {alert("Clipboard item not supported on your browser")}
     const x = cnv.width;
     const y = cnv.height;
-    let tcanvas = document.createElement("canvas");
+    const tcanvas = document.createElement("canvas");
     tcanvas.width = x;
     tcanvas.height = y;
-    tctx = tcanvas.getContext("2d")
+    tctx = tcanvas.getContext("2d");
     tctx.putImageData(new ImageData(basecnv.getContext("2d").getImageData(0,0,x,y).data,x,y),0,0);
     tctx.drawImage(cnv,0,0);
     tcanvas.toBlob(async (blob) => {
