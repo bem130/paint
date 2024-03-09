@@ -11,11 +11,11 @@
         <div class="resizer_Hcontainer" id="mainarea" data-proportion="15:1">
             <div class="resizer_content">
                 <div class="resizer_Vcontainer" data-proportion="13:1">
-                    <div class="resizer_content" id="imgOutArea"><canvas id="canvas"></canvas></div>
+                    <div class="resizer_content" id="imgOutArea"><canvas id="base"></canvas><canvas id="canvas"></canvas></div>
                     <div class="resizer_splitter"></div>
                     <div class="resizer_content">
                         <input type="color" id="colorpicker">
-                        <input type="range" id="linewidth" min="-15" max="30">
+                        <input type="range" id="linewidth" min="-15" max="30" value="0">
                     </div>
                 </div>
             </div>
@@ -26,11 +26,13 @@
                 </div>
                 <div class="singleselectbtn" id="PenType">
                     <button data-value="ballpoint1">BallPoint</button>
+                    <button data-value="brush1">Brush</button>
                 </div>
             </div>
         </div>
     </body>
 </html>
+<script src="https://cdn.jsdelivr.net/npm/noisejs@2.1.0/index.min.js"></script>
 <script>
 function resizer_Vcontainer_addEL (container,framesMin,callback=()=>{}) {
     container.querySelector(":scope > .resizer_splitter").addEventListener("pointerdown",(e)=>{
@@ -93,13 +95,21 @@ function resize() {
         cnv.style.marginLeft = (rw).toString()+"px";
         cnv.style.marginRight = (rw).toString()+"px";
         cnv.style.transform = "scale("+csc.toString()+","+csc.toString()+")";
+        basecnv.style.marginTop = (rh).toString()+"px";
+        basecnv.style.marginBottom = (rh).toString()+"px";
+        basecnv.style.marginLeft = (rw).toString()+"px";
+        basecnv.style.marginRight = (rw).toString()+"px";
+        basecnv.style.transform = "scale("+csc.toString()+","+csc.toString()+")";
     }
 };
 window.onresize = resize;
 window.onload = ()=>{
     cnv.height = 1080;
     cnv.width = 1920;
+    basecnv.height = 1080;
+    basecnv.width = 1920;
     resize();
+    makebase();
 };
 </script>
 <script>
@@ -109,6 +119,8 @@ var imageConfig = {
     width: 1920,
     height: 1080
 }
+var basecnv = document.getElementById("base");
+
 var cnv = document.getElementById("canvas");
 let ctx = cnv.getContext("2d");
 let imgOutArea = document.getElementById("imgOutArea");
@@ -194,7 +206,7 @@ function drawpath(e) {
        // console.log(e)
     }
 
-    let linewidth = 10*1.1**Number(document.querySelector("#linewidth").value);
+    let linewidth = 3*1.1**Number(document.querySelector("#linewidth").value);
     console.log(linewidth);
     let color = document.querySelector("#colorpicker").value.slice(1).match(/.{2}/g).map((x)=>{return parseInt(x,16)});
     if (stroke.length>3) {
@@ -240,21 +252,29 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,color) {
                 {
                     ctx.globalCompositeOperation = "destination-out";
                     ctx.fillStyle = `rgb(0,0,0,1)`;
-                    width1 = linewidth*Math.min(lerp(pointer1.pressure,pointer2.pressure,t)*3,1);
-                    let projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
-                    width2 = width1*(1+projection_len*7);
                     ctx.beginPath();
-                    ctx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
+                    ctx.arc(x,y,linewidth,0,Math.PI*2)
                     ctx.fill();
                 }
                 break;
             case "ballpoint1":
                 {
                     ctx.globalCompositeOperation = "source-over";
-                    ctx.fillStyle = `rgb(${color.join(",")},1)`;
+                    ctx.fillStyle = `rgb(${color.join(",")})`;
+                    width1 = linewidth*Math.min(lerp(pointer1.pressure,pointer2.pressure,t)*3,1);
+                    width2 = width1;
+                    ctx.beginPath();
+                    ctx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
+                    ctx.fill();
+                }
+                break;
+            case "brush1":
+                {
+                    ctx.globalCompositeOperation = "";
+                    ctx.fillStyle = `rgb(${color.join(",")})`;
                     width1 = linewidth*Math.min(lerp(pointer1.pressure,pointer2.pressure,t)*3,1);
                     let projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
-                    width2 = width1*(1+projection_len*7);
+                    width2 = width1*(1.5+projection_len*7);
                     ctx.beginPath();
                     ctx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
                     ctx.fill();
@@ -292,16 +312,35 @@ document.querySelectorAll("div.singleselectbtn").forEach((singleselect)=>{ // ä¸
     buttons[0].dataset.stat="on";
     singleselect.dataset.value=buttons[0].dataset.value;
 })
+
+function makebase() {
+    const x = cnv.width;
+    const y = cnv.height;
+    noise = new Noise(Math.random());
+    iarr = new Uint8ClampedArray(x * y * 4);
+    let color = [250,248,245]
+    for (iy = 0; iy < y; iy++) {
+        for (ix = 0; ix < x; ix++) {
+            c = noise.simplex2(ix*1,iy*1)*10+noise.simplex2(ix/10+10,iy/10+10)*3+noise.simplex2(iy/1000+15,ix/500+15)*10+245
+            index = (iy*x+ix)*4; // index of position [ix,iy]
+            iarr[index+0] = c*color[0]/255; // Red
+            iarr[index+1] = c*color[1]/255; // Green
+            iarr[index+2] = c*color[2]/255; // Blue
+            iarr[index+3] = 255; // Alpha
+        }
+    }
+    let basectx = basecnv.getContext("2d");
+    basectx.putImageData(new ImageData(iarr,x,y),0,0)
+}
 </script>
 <style>
     body {
-        background-color: rgb(0, 0, 21);
+        background-color: rgb(21, 10, 0);
         position: fixed;
         padding: 0;
         margin: 0;
     }
     canvas {
-        background-color: rgb(255, 255, 255);
         cursor: crosshair;
         touch-action: none;
         position: absolute;
