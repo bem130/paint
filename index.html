@@ -21,19 +21,28 @@
             </div>
             <div class="resizer_splitter"></div>
             <div class="resizer_content">
-                <div>
-                    <button data-stat="off" class="toggle" id="Eraser">Eraser</button>
-                </div>
-                <div class="singleselectbtn" id="PenType">
-                    <button data-value="ballpoint1">BallPoint</button>
-                    <button data-value="brush1">Brush</button>
-                    <button data-value="pencil1">Pencil</button>
+                <div class="resizer_Vcontainer" data-proportion="5:1">
+                    <div class="resizer_content">
+                        <div>
+                            <button data-stat="off" class="toggle" id="Eraser">Eraser</button>
+                        </div>
+                        <div class="singleselectbtn" id="PenType">
+                            <button data-value="ballpoint1">BallPoint</button>
+                            <button data-value="brush1">Brush</button>
+                            <button data-value="pencil1">Pencil</button>
+                        </div>
+                    </div>
+                    <div class="resizer_splitter"></div>
+                    <div class="resizer_content">
+                        <button onclick="copyImage()">Copy Image</button>
+                    </div>
                 </div>
             </div>
         </div>
     </body>
 </html>
 <script src="https://cdn.jsdelivr.net/npm/noisejs@2.1.0/index.min.js"></script>
+<script src="penemulator.js"></script>
 <script>
 function resizer_Vcontainer_addEL (container,framesMin,callback=()=>{}) {
     container.querySelector(":scope > .resizer_splitter").addEventListener("pointerdown",(e)=>{
@@ -104,16 +113,20 @@ function resize() {
     }
 };
 window.onresize = resize;
-window.onload = ()=>{
+window.onload = init;
+function init() {
     cnv.height = imageConfig.height;
     cnv.width = imageConfig.width;
     basecnv.height = imageConfig.height;
     basecnv.width = imageConfig.width;
     tmpcnv.height = imageConfig.height;
     tmpcnv.width = imageConfig.width;
+    stroke = [];
+    cnv_history = [];
+    cnv_history_trash = [];
     resize();
     makebase();
-    unfinishedlineloop();
+    unfinishedlineloop(true);
     let image = ctx.getImageData(0,0,1920,1080);
     cnv_history.push(image);
 };
@@ -209,7 +222,7 @@ function draw(e) {
     }
 }
 
-function unfinishedlineloop() {
+function unfinishedlineloop(loop=false) {
     let penType = (()=>{
         if (document.querySelector("#Eraser").dataset.stat=="on") {
             return "eraser"
@@ -244,7 +257,7 @@ function unfinishedlineloop() {
                     for (ix = 0; ix < x; ix++) {
                         index = (iy*x+ix)*4; // index of position [ix,iy]
                         if (data.data[index+3]==0) {continue;}
-                        c = noise.simplex2(ix,iy)*0.5+noise.simplex2(ix/4,iy/4)*0.5+0.2+data.data[index+0]/255
+                        c = noise.simplex2(ix,iy)*0.5+noise.simplex2(ix/4,iy/4)*0.5+data.data[index+0]/255*1.2
                         iarr[index+0] = color[0]; // Red
                         iarr[index+1] = color[1]; // Green
                         iarr[index+2] = color[2]; // Blue
@@ -260,7 +273,9 @@ function unfinishedlineloop() {
         ctx.drawImage(rcanvas,0,0);
         console.log("draw")
     }
-    setTimeout(unfinishedlineloop,1);
+    if (loop) {
+        setTimeout(unfinishedlineloop,1,true);
+    }
 }
 
 function drawpath(e,penType) {
@@ -280,6 +295,7 @@ function drawpath(e,penType) {
     }
 }
 function endpath(e) {
+    unfinishedlineloop(false);
     if (stroke.length>2) {
         let image = ctx.getImageData(0,0,imageConfig.width,imageConfig.height);
         cnv_history.push(image);
@@ -315,7 +331,7 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
             case "ballpoint1":
                 {
                     tctx.globalCompositeOperation = "source-over";
-                    width1 = linewidth*Math.min(lerp(pointer1.pressure,pointer2.pressure,t)*3,1);
+                    width1 = linewidth*Math.min((lerp(pointer1.pressure,pointer2.pressure,t)+0.5)**2,1);
                     width2 = width1;
                     tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${lerp(pointer1.twist,pointer2.twist,t)/10},${lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
                     tctx.beginPath();
@@ -326,7 +342,7 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
             case "brush1":
                 {
                     tctx.globalCompositeOperation = "";
-                    width1 = linewidth*Math.min(lerp(pointer1.pressure,pointer2.pressure,t)*3,1);
+                    width1 = linewidth*lerp(pointer1.pressure,pointer2.pressure,t)**1.4;
                     let projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
                     width2 = width1*(1.5+projection_len*7);
                     tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${lerp(pointer1.twist,pointer2.twist,t)/10},${lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
@@ -338,12 +354,12 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
             case "pencil1":
                 {
                     tctx.globalCompositeOperation = "";
-                    width1 = linewidth*Math.min(lerp(pointer1.pressure,pointer2.pressure,t)*3,1);
+                    width1 = linewidth*Math.min((lerp(pointer1.pressure,pointer2.pressure,t)*1),1);
                     let projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
-                    width2 = width1*(1+projection_len*7);
+                    width2 = width1*(1+projection_len*3);
                     tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${lerp(pointer1.twist,pointer2.twist,t)/10},${lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
                     tctx.beginPath();
-                    tctx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
+                    tctx.ellipse(x,y,width1,width2,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
                     tctx.fill();
                 }
                 break;
@@ -398,6 +414,24 @@ function makebase() {
     }
     let basectx = basecnv.getContext("2d");
     basectx.putImageData(new ImageData(iarr,x,y),0,0);
+}
+
+
+
+function copyImage() {
+    if (typeof ClipboardItem=="undefined") {alert("Clipboard item not supported on your browser")}
+    const x = cnv.width;
+    const y = cnv.height;
+    let tcanvas = document.createElement("canvas");
+    tcanvas.width = x;
+    tcanvas.height = y;
+    tctx = tcanvas.getContext("2d")
+    tctx.putImageData(new ImageData(basecnv.getContext("2d").getImageData(0,0,x,y).data,x,y),0,0);
+    tctx.drawImage(cnv,0,0);
+    tcanvas.toBlob(async (blob) => {
+        const item = new ClipboardItem({'image/png': blob });
+        await navigator.clipboard.write([item]);
+    });
 }
 </script>
 <style>
