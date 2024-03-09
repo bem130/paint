@@ -10,14 +10,17 @@
     <body>
         <div class="resizer_Hcontainer" id="mainarea" data-proportion="15:1">
             <div class="resizer_content">
-                <div class="resizer_Vcontainer" data-proportion="13:2">
+                <div class="resizer_Vcontainer" data-proportion="13:1">
                     <div class="resizer_content" id="imgOutArea"><canvas id="canvas"></canvas></div>
                     <div class="resizer_splitter"></div>
-                    <div class="resizer_content">pen tools</div>
+                    <div class="resizer_content">
+                        <input type="color" id="colorpicker">
+                        <input type="range" id="linewidth" min="-15" max="15">
+                    </div>
                 </div>
             </div>
             <div class="resizer_splitter"></div>
-            <div class="resizer_content">pen tools</div>
+            <div class="resizer_content"></div>
         </div>
     </body>
 </html>
@@ -184,7 +187,10 @@ function drawpath(e) {
        // console.log(e)
     }
 
-    ctx.fillStyle = "rgb(200,50,100,0.05)";
+    let linewidth = 10*1.1**Number(document.querySelector("#linewidth").value);
+    console.log(linewidth);
+    let color = document.querySelector("#colorpicker").value.slice(1).match(/.{2}/g).map((x)=>{return parseInt(x,16)});
+    ctx.fillStyle = `rgb(${color.join(",")},0.05)`;
     ctx.lineCap = "round";
     if (stroke.length>3) {
         i = stroke.length-1;
@@ -193,7 +199,7 @@ function drawpath(e) {
         let p2 = stroke[i];
         let m1 = midpoint(p0,p1);
         let m2 = midpoint(p1,p2);
-        drawQuadraticCurve(m1,p1,m2,p0,p1);
+        drawQuadraticCurve(m1,p1,m2,p0,p1,linewidth);
     }
 }
 function endpath(e) {
@@ -213,12 +219,12 @@ function lerp(a,b,t) {
     return a + t*(b-a)
 }
 
-function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2) {
+function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth) {
     for (let t=0;t<=1;t+=0.005) {
         x = (p0.x-2*p1.x+p2.x)*t*t+(-2*p0.x+2*p1.x)*t+p0.x;
         y = (p0.y-2*p1.y+p2.y)*t*t+(-2*p0.y+2*p1.y)*t+p0.y;
         {
-            width1 = 10*lerp(pointer1.pressure,pointer2.pressure,t)**1.2*2;
+            width1 = linewidth*lerp(pointer1.pressure,pointer2.pressure,t)**1.2*2;
             let projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
             width2 = width1*(1+projection_len*7);
         }
@@ -227,6 +233,7 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2) {
         ctx.fill();
     }
 }
+
 </script>
 <style>
     body {
@@ -247,6 +254,15 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2) {
     #mainarea {
         height: 100dvh;
         width: 100dvw;
+    }
+    #colorpicker {
+        display: inline-block;
+        width: 200px;
+        height: 100%;
+    }
+    #linewidth {
+        display: inline-block;
+        width: 200px;
     }
 </style>
 <style>
