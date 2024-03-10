@@ -24,14 +24,31 @@
             <div class="resizer_content">
                 <div class="resizer_Vcontainer" data-proportion="5:1">
                     <div class="resizer_content">
-                        <div>
-                            <button data-stat="off" class="toggle" id="Eraser">Eraser</button>
-                        </div>
-                        <div class="singleselectbtn" id="PenType">
-                            <button data-value="pencil1">Pencil</button>
-                            <button data-value="ballpoint1">BallPoint</button>
-                            <button data-value="brush1">InkBrush</button>
-                            <button data-value="brush2">PaintBrush</button>
+                        <div class="resizer_Vcontainer" data-proportion="5:1">
+                            <div class="resizer_content">
+                                <div>
+                                    <button data-stat="off" class="toggle" id="Eraser">Eraser</button>
+                                </div>
+                                <div class="singleselectbtn" id="PenType">
+                                    <button data-value="pencil1">Pencil</button>
+                                    <button data-value="ballpoint1">BallPoint</button>
+                                    <button data-value="brush1">InkBrush</button>
+                                    <button data-value="brush2">PaintBrush</button>
+                                </div>
+                            </div>
+                            <div class="resizer_splitter"></div>
+                            <div class="resizer_content">
+                                <div id="basesettings">
+                                    <input type="color" id="basecolorpicker" value="#f7f5f2">
+                                    <input type="color" id="ruledlinecolorpicker" value="#35333c">
+                                    <input type="number" id="ruledlinewidthy" min="0" max="10" step="0.1" value="0.7">
+                                    <input type="number" id="ruledlinewidthx" min="0" max="10" step="0.1" value="0">
+                                    <input type="number" id="ruledlinespany" min="5" max="1000" step="1" value="100">
+                                    <input type="number" id="ruledlinespanx" min="5" max="1000" step="1" value="100">
+                                    <input type="number" id="ruledlinedotspany" min="5" max="100" step="1" value="1">
+                                    <input type="number" id="ruledlinedotspanx" min="5" max="100" step="1" value="1">
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="resizer_splitter"></div>
@@ -441,6 +458,11 @@ document.querySelectorAll("div.singleselectbtn").forEach((singleselect)=>{ // �
     buttons[0].dataset.stat="on";
     singleselect.dataset.value=buttons[0].dataset.value;
 })
+document.querySelectorAll("#basesettings input").forEach((x)=>{ // イベント - 背景変更
+    x.addEventListener("change",(e)=>{
+        makebase();
+    })
+})
 
 function makebase() {
     const x = imageConfig.width;
@@ -448,10 +470,10 @@ function makebase() {
     noise = new Noise(Math.random());
     let iarr = new Uint8ClampedArray(x * y * 4);
     { // 下地
-        const color = [250,248,245];
+        const color = document.querySelector("#basecolorpicker").value.slice(1).match(/.{2}/g).map((x)=>{return parseInt(x,16)});
         for (let iy = 0; iy < y; iy++) {
             for (let ix = 0; ix < x; ix++) {
-                c = noise.simplex2(ix*1,iy*1)*10+noise.simplex2(ix/10+10,iy/10+10)*3+noise.simplex2(iy/1000+15,ix/500+15)*10
+                c = noise.simplex2(ix*1,iy*1)*10+noise.simplex2(ix/10+10,iy/10+10)*3+noise.simplex2(ix/20+10,iy/20+10)*2  +noise.simplex2(iy/1000+15,ix/500+15)*4
                 index = (iy*x+ix)*4; // index of position [ix,iy]
                 iarr[index+0] = c+color[0]; // Red
                 iarr[index+1] = c+color[1]; // Green
@@ -463,11 +485,26 @@ function makebase() {
     const basectx = basecnv.getContext("2d");
     basectx.putImageData(new ImageData(iarr,x,y),0,0);
     { // 罫線
-        const color = [105,100,150];
-        for (let ix=0;ix<x;ix+=2){
-            for (let iy=0;iy<y;iy+=100) {
-                basectx.fillStyle = `rgb(${color.join(",")},0.5)`;
-                width1 = noise.simplex2(ix/10,iy/10)*0.2+1;
+        const color = document.querySelector("#ruledlinecolorpicker").value.slice(1).match(/.{2}/g).map((x)=>{return parseInt(x,16)});
+        let weighty = Number(document.querySelector("#ruledlinewidthy").value);
+        let weightx = Number(document.querySelector("#ruledlinewidthx").value);
+        let spany = Number(document.querySelector("#ruledlinespany").value);
+        let spanx = Number(document.querySelector("#ruledlinespanx").value);
+        let dotspany = Number(document.querySelector("#ruledlinedotspany").value);
+        let dotspanx = Number(document.querySelector("#ruledlinedotspanx").value);
+        for (let ix=0;ix<x;ix+=dotspany){
+            for (let iy=0;iy<y;iy+=spany) {
+                basectx.fillStyle = `rgb(${color.join(",")},0.3)`;
+                width1 = noise.simplex2(ix/10,iy/10)*weighty/5+weighty;
+                basectx.beginPath();
+                basectx.arc(ix,iy,width1,0,Math.PI*2);
+                basectx.fill();
+            }
+        }
+        for (let ix=0;ix<x;ix+=spanx){
+            for (let iy=0;iy<y;iy+=dotspanx) {
+                basectx.fillStyle = `rgb(${color.join(",")},0.3)`;
+                width1 = noise.simplex2(ix/10,iy/10)*weightx/5+weightx;
                 basectx.beginPath();
                 basectx.arc(ix,iy,width1,0,Math.PI*2);
                 basectx.fill();
