@@ -8,13 +8,24 @@
         <meta property="description" content="Paint software that runs on a web browser">
     </head>
     <body>
-        <div class="resizer_Hcontainer" id="mainarea" data-proportion="10:1">
+        <div class="resizer_Hcontainer" id="mainarea" data-proportion="6:1">
             <div class="resizer_content">
-                <div class="resizer_Vcontainer" data-proportion="13:1">
+                <div class="resizer_Vcontainer" data-proportion="4:1">
                     <div class="resizer_content" id="imgOutArea"><canvas id="base"></canvas><canvas id="canvas"></canvas></div>
                     <div class="resizer_splitter"></div>
                     <div class="resizer_content">
-                        <div id="colorpalette" class="singleselectbtn">
+                        <div class="resizer_Hcontainer" data-proportion="1:7">
+                            <div class="resizer_content">
+                                <canvas id="colorpicker"></canvas>
+                                <button id="addColor">Add</button>
+                                <button id="updateColor">Update</button>
+                                <button id="removeColor">Remove</button>
+                            </div>
+                            <div class="resizer_splitter"></div>
+                            <div class="resizer_content">
+                                <div id="colorpalette" class="singleselectbtn">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -73,6 +84,7 @@
 </html>
 <script src="https://cdn.jsdelivr.net/npm/noisejs@2.1.0/index.min.js"></script>
 <script src="color_conversion.js"></script>
+<script src="colorpicker.js"></script>
 <script src="penemulator.js"></script>
 <script>
 function resizer_Vcontainer_addEL (container,framesMin,callback=()=>{}) {
@@ -263,7 +275,7 @@ function unfinishedlineloop(loop=false) {
         ctx.putImageData(cnv_history[cnv_history.length-1],0,0);
         const x = cnv.width;
         const y = cnv.height;
-        const color = hsv2rgb(...document.querySelector("#colorpalette").dataset.value.split(",").map((x)=>{return Number(x);}));
+        const color = hsl2rgb(...document.querySelector("#colorpalette").dataset.value.split(",").map((x)=>{return Number(x);}));
         const alpha = Number(document.querySelector("#alpha").value);
     startTime = performance.now();
         const data = tctx.getImageData(0,0,x,y);
@@ -444,50 +456,11 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth) {
     }
 }
 
-
-let colorPalette = [
-    [0,0,0],
-    [0,100,50],
-    [120,100,50],
-    [240,100,50],
-]
-{
-    let cpelm = document.querySelector("#colorpalette");
-    for (let i of colorPalette) {
-        let belm = document.createElement("button");
-        belm.dataset.value = i.join(",");
-        belm.style.backgroundColor = `rgb(${hsv2rgb(...i).join(",")})`;
-        let selm = document.createElement("span");
-        selm.innerText = i.join(",");
-        belm.appendChild(selm);
-        cpelm.appendChild(belm);
-    }
-}
-
 document.querySelectorAll(".toggle").forEach((x)=>{ // トグルボタン
     x.dataset.stat = x.dataset.stat=="on"? "on": "off";
     x.onclick = (e)=>{
         e.target.dataset.stat = e.target.dataset.stat=="off"? "on": "off";
     }
-})
-document.querySelectorAll("div.singleselectbtn").forEach((singleselect)=>{ // 一つだけ選べるボタン群
-    let buttons = [];
-    for (let button of singleselect.querySelectorAll(":scope > button")) {
-        buttons.push(button);
-    }
-    console.log(buttons)
-    for (let button of buttons) {
-        button.onclick = (e)=>{
-            for (let button of buttons) {
-                button.dataset.stat="off";
-            }
-            button.dataset.stat="on";
-            singleselect.dataset.value=button.dataset.value;
-        }
-        button.dataset.stat="off";
-    }
-    buttons[0].dataset.stat="on";
-    singleselect.dataset.value=buttons[0].dataset.value;
 })
 
 document.querySelectorAll("#Eraser").forEach((x)=>{ // トグルボタン - 消しゴム選択
@@ -497,7 +470,7 @@ document.querySelectorAll("#Eraser").forEach((x)=>{ // トグルボタン - 消�
         document.querySelector("#PenType").dataset.eraser=e.target.dataset.stat;
     }
 })
-document.querySelectorAll("div.singleselectbtn").forEach((singleselect)=>{ // 一つだけ選べるボタン群 - ペン選択
+document.querySelectorAll("#PenType").forEach((singleselect)=>{ // 一つだけ選べるボタン群 - ペン選択
     let buttons = [];
     for (let button of singleselect.querySelectorAll(":scope > button")) {
         buttons.push(button);
@@ -523,6 +496,80 @@ document.querySelectorAll("#basesettings input").forEach((x)=>{ // イベント 
         makebase();
     })
 })
+
+let colorPalette = [
+    [0,0,0],
+    [0,100,50],
+    [120,100,50],
+    [240,100,50],
+    [0,100,100],
+]
+{
+    let cpelm = document.querySelector("#colorpalette");
+    let changeColor = ColorPicker(document.querySelector("#colorpicker"),40,10);
+    console.log(changeColor)
+    function updateColorPalette() {
+        cpelm.innerHTML = "";
+        for (let i in colorPalette) {
+            let color = colorPalette[i];
+            let belm = document.createElement("button");
+            belm.dataset.value = color.join(",");
+            belm.style.backgroundColor = `rgb(${hsl2rgb(...color).join(",")})`;
+            belm.style.color = `hsl(${180-color[0]}deg,${100-color[1]}%,${100-Math.floor(color[2]/50-0.1)*100}%)`;
+            belm.innerText = color.join(",");
+            cpelm.appendChild(belm);
+        }
+        [cpelm].forEach((singleselect)=>{ // 一つだけ選べるボタン群 - カラーパレット
+            let buttons = [];
+            for (let button of singleselect.querySelectorAll(":scope > button")) {
+                buttons.push(button);
+            }
+            console.log(buttons)
+            for (let i in buttons) {
+                let button = buttons[i];
+                button.onclick = (e)=>{
+                    for (let button of buttons) {
+                        button.dataset.stat="off";
+                    }
+                    button.dataset.stat="on";
+                    singleselect.dataset.value=button.dataset.value;
+                    singleselect.dataset.index=i;
+                    changeColor(...colorPalette[i]);
+                }
+                button.dataset.stat="off";
+            }
+            buttons[0].dataset.stat="on";
+            singleselect.dataset.value=buttons[0].dataset.value;
+            singleselect.dataset.index=0;
+        })
+        changeColor(...colorPalette[0]);
+    }
+    document.querySelector("#addColor").addEventListener("click",(e)=>{
+        let color = document.querySelector("#colorpicker").dataset.value.split(",").map((x)=>{return Number(x);});
+        let index = Number(cpelm.dataset.index);
+        colorPalette.splice(index+1,0,color);
+        updateColorPalette();
+        let btns = cpelm.querySelectorAll(":scope > button");
+        btns[index+1].onclick();
+    })
+    document.querySelector("#updateColor").addEventListener("click",(e)=>{
+        let color = document.querySelector("#colorpicker").dataset.value.split(",").map((x)=>{return Number(x);});
+        let index = Number(cpelm.dataset.index);
+        colorPalette[index] = color;
+        updateColorPalette();
+        let btns = cpelm.querySelectorAll(":scope > button");
+        btns[index].onclick();
+    })
+    document.querySelector("#removeColor").addEventListener("click",(e)=>{
+        let color = document.querySelector("#colorpicker").dataset.value.split(",").map((x)=>{return Number(x);});
+        let index = Number(cpelm.dataset.index);
+        colorPalette.splice(index,1);
+        updateColorPalette();
+        let btns = cpelm.querySelectorAll(":scope > button");
+        btns[index-1].onclick();
+    })
+    updateColorPalette();
+}
 
 function makebase() {
     const x = imageConfig.width;
@@ -573,8 +620,6 @@ function makebase() {
     }
 }
 
-
-
 function openImage() {
     const x = cnv.width;
     const y = cnv.height;
@@ -599,7 +644,7 @@ function openImage() {
         padding: 0;
         margin: 0;
     }
-    canvas {
+    #imgOutArea>canvas {
         cursor: crosshair;
         touch-action: none;
         position: absolute;
@@ -614,7 +659,12 @@ function openImage() {
     #colorpicker {
         display: inline-block;
         width: 100%;
-        height: 100px;
+    }
+    #addColor, #updateColor, #removeColor {
+        size: 60%;
+        padding: 5px;
+        margin: 2px;
+        width: calc(33.33% - 7px);
     }
     .range_brushsettings {
         display: inline-block;
@@ -659,12 +709,6 @@ function openImage() {
             padding: 0.5%;
             border: 1px solid rgba(0, 0, 0);
             border-radius: 10px;
-            & > span {
-                background-color: rgba(128, 128, 128, 0.6);
-                border-radius: 3px;
-                color: white;
-                padding: 2px;
-            }
             &:hover {
                 box-shadow: 0px 0px 3px 2px rgb(255, 255, 255,0.5);
             }

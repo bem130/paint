@@ -1,18 +1,50 @@
-//* https://qiita.com/akebi_mh/items/3377666c26071a4284ee より 少し変更 */
-/**
- *  hsv2rgb (h, s, v)
- */
-function hsv2rgb(h, s, v) {
-    // 引数処理
-    h = (h < 0 ? h % 360 + 360 : h) % 360 / 60;
-    s = s < 0 ? 0 : s > 1 ? 1 : s;
-    v = v < 0 ? 0 : v > 1 ? 1 : v;
+/* https://note.kiriukun.com/entry/20181206-rgb-and-hsl-conversion より 少し改変 */
+const hsl2rgb = function(h, s, l) {
+	const RGB_MAX = 255;
+	const HUE_MAX = 360;
+	const SATURATION_MAX = 100;
+	const LIGHTNESS_MAX = 100;
+	let r, g, b, max, min;
+	
+	h = h % HUE_MAX;
+	s = s / SATURATION_MAX;
+	l = l / LIGHTNESS_MAX;
+	
+	if (l < 0.5) {
+		max = l + l * s;
+		min = l - l * s;
+	} else {
+		max = l + (1 - l) * s;
+		min = l - (1 - l) * s;
+	}
+	
+	const hp = HUE_MAX / 6;
+	const q = h / hp;
+	if (q <= 1) {
+		r = max;
+		g = (h / hp) * (max - min) + min;
+		b = min;
+	} else if (q <= 2) {
+		r = ((hp * 2 - h) / hp) * (max - min) + min;
+		g = max;
+		b = min;
+	} else if (q <= 3) {
+		r = min;
+		g = max;
+		b = ((h - hp * 2) / hp) * (max - min) + min;
+	} else if (q <= 4) {
+		r = min;
+		g = ((hp * 4 - h) / hp) * (max - min) + min;
+		b = max;
+	} else if (q <= 5) {
+		r = ((h - hp * 4) / hp) * (max - min) + min;
+		g = min;
+		b = max;
+	} else {
+		r = max;
+		g = min;
+		b = ((HUE_MAX - h) / hp) * (max - min) + min;
+	}
 
-    // HSV to RGB 変換
-    const c = [5, 3, 1].map(function(i) {
-        return Math.round((v - Math.max(0, Math.min(1, 2 - Math.abs(2 - (h + i) % 6))) * s * v) * 255);
-    });
-
-    // 戻り値
-    return c;
-}
+	return [r*RGB_MAX,g*RGB_MAX,b*RGB_MAX];
+};
