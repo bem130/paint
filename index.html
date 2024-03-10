@@ -8,32 +8,43 @@
         <meta property="description" content="Paint software that runs on a web browser">
     </head>
     <body>
-        <div class="resizer_Hcontainer" id="mainarea" data-proportion="15:1">
+        <div class="resizer_Hcontainer" id="mainarea" data-proportion="10:1">
             <div class="resizer_content">
                 <div class="resizer_Vcontainer" data-proportion="13:1">
                     <div class="resizer_content" id="imgOutArea"><canvas id="base"></canvas><canvas id="canvas"></canvas></div>
                     <div class="resizer_splitter"></div>
                     <div class="resizer_content">
-                        <input type="color" id="colorpicker">
-                        <input type="range" id="linewidth" min="-15" max="30" value="0">
-                        <input type="range" id="alpha" min="0" max="255" value="255">
+                        
                     </div>
                 </div>
             </div>
             <div class="resizer_splitter"></div>
             <div class="resizer_content">
-                <div class="resizer_Vcontainer" data-proportion="5:1">
+                <div class="resizer_Vcontainer" data-proportion="13:1">
                     <div class="resizer_content">
                         <div class="resizer_Vcontainer" data-proportion="5:1">
                             <div class="resizer_content">
-                                <div>
-                                    <button data-stat="off" class="toggle" id="Eraser">Eraser</button>
-                                </div>
-                                <div class="singleselectbtn" id="PenType">
-                                    <button data-value="pencil1">Pencil</button>
-                                    <button data-value="ballpoint1">BallPoint</button>
-                                    <button data-value="brush1">InkBrush</button>
-                                    <button data-value="brush2">PaintBrush</button>
+                                <div class="resizer_Vcontainer" data-proportion="3:1">
+                                    <div class="resizer_content">
+                                        <div>
+                                            <button data-stat="off" class="toggle" id="Eraser">Eraser</button>
+                                        </div>
+                                        <div class="singleselectbtn" id="PenType">
+                                            <button data-value="pencil1">Pencil</button>
+                                            <button data-value="ballpoint1">BallPoint</button>
+                                            <button data-value="brush1">InkBrush</button>
+                                            <button data-value="brush2">PaintBrush</button>
+                                        </div>
+                                    </div>
+                                    <div class="resizer_splitter"></div>
+                                    <div class="resizer_content">
+                                        <input type="range" id="linewidth" min="-15" max="30" value="0" class="range_brushsettings">
+                                        <input type="range" id="alpha" min="0" max="255" value="255" class="range_brushsettings">
+                                        <input type="color" id="colorpicker">
+                                        <div>
+                                            <button data-stat="off" class="toggle" id="Debug_PointerInformation">Debug - Pointer information</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="resizer_splitter"></div>
@@ -206,12 +217,6 @@ function draw(e) {
     const ns = {x:(e.clientX-rect.left)/(rect.right-rect.left)*cnv.width,y:(e.clientY-rect.top)/(rect.bottom-rect.top)*cnv.height,time:performance.now()}
     const bs = stroke[stroke.length-1]??ns;
     const speed = Math.sqrt((bs.x-ns.x)**2+(bs.y-ns.y)**2)/(ns.time-bs.time);
-    const penType = (()=>{
-        if (document.querySelector("#Eraser").dataset.stat=="on") {
-            return "eraser"
-        }
-        return document.querySelector("#PenType").dataset.value;
-    })();
     const drawfunc = (e)=>{
        // console.log(e)
         const pointer = {
@@ -228,7 +233,7 @@ function draw(e) {
         //console.log(pointer)
         switch (e.buttons) {
             case 1:
-                drawpath(pointer,penType);
+                drawpath(pointer);
                 //logEvents(pointer);
             break;
         }
@@ -250,7 +255,10 @@ function unfinishedlineloop(loop=false) {
         }
         return document.querySelector("#PenType").dataset.value;
     })();
-    if (stroke.length>3&&penType!="eraser") {
+    let Debug_PointerInformation = document.querySelector("#Debug_PointerInformation").dataset.stat=="on";
+    if (penType=="eraser"||Debug_PointerInformation) {
+    }
+    else if (stroke.length>3) {
         ctx.putImageData(cnv_history[cnv_history.length-1],0,0);
         const x = cnv.width;
         const y = cnv.height;
@@ -333,7 +341,7 @@ function unfinishedlineloop(loop=false) {
     }
 }
 
-function drawpath(e,penType) {
+function drawpath(e) {
     {
         stroke.push(e);
     }
@@ -346,7 +354,7 @@ function drawpath(e,penType) {
         const p2 = stroke[i];
         const m1 = midpoint(p0,p1);
         const m2 = midpoint(p1,p2);
-        drawQuadraticCurve(m1,p1,m2,p0,p1,linewidth,penType);
+        drawQuadraticCurve(m1,p1,m2,p0,p1,linewidth);
     }
 }
 function endpath(e) {
@@ -373,8 +381,16 @@ function rotate2d(p,a) {
     return [p[0]*cos-p[1]*sin,p[0]*sin+p[1]*cos];
 }
 
-function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
+function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth) {
+    const penType = (()=>{
+        if (document.querySelector("#Eraser").dataset.stat=="on") {
+            return "eraser"
+        }
+        return document.querySelector("#PenType").dataset.value;
+    })();
     const span = 0.005*Math.log(linewidth+2);
+    let Debug_PointerInformation = document.querySelector("#Debug_PointerInformation").dataset.stat=="on";
+    const dCtx = Debug_PointerInformation?ctx:tctx;
     for (let t=0;t<=1;t+=span) {
         const x = (p0.x-2*p1.x+p2.x)*t*t+(-2*p0.x+2*p1.x)*t+p0.x;
         const y = (p0.y-2*p1.y+p2.y)*t*t+(-2*p0.y+2*p1.y)*t+p0.y;
@@ -391,50 +407,56 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
                 break;
             case "ballpoint1":
                 {
-                    tctx.globalCompositeOperation = "lighten";
+                    dCtx.globalCompositeOperation = "lighten";
                     width1 = linewidth*Math.min((lerp(pointer1.pressure,pointer2.pressure,t)+0.5)**2,1);
                     width2 = width1;
-                    tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${angle*255/360},${255-lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
-                    tctx.beginPath();
-                    tctx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
-                    tctx.fill();
+                    dCtx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${angle*255/360},${255-lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
+                    dCtx.beginPath();
+                    dCtx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
+                    dCtx.fill();
                 }
                 break;
             case "brush1":
             case "brush2":
                 {
-                    tctx.globalCompositeOperation = "lighten";
+                    dCtx.globalCompositeOperation = "lighten";
                     width1 = linewidth*Math.max(lerp(pointer1.pressure,pointer2.pressure,t)**1.2-0.2,0)*(2/Math.log(lerp(pointer1.speed,pointer2.speed,t)+5));
                     const projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
                     width2 = width1*(1.5+projection_len*7);
-                    tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${angle*255/360},${255-lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
-                    tctx.beginPath();
-                    tctx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
-                    tctx.fill();
+                    dCtx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${angle*255/360},${255-lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
+                    dCtx.beginPath();
+                    dCtx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
+                    dCtx.fill();
                 }
                 break;
             case "pencil1":
                 {
-                    tctx.globalCompositeOperation = "lighten";
+                    dCtx.globalCompositeOperation = "lighten";
                     width1 = linewidth*Math.min(Math.max(lerp(pointer1.pressure,pointer2.pressure,t)-0.1,0),1);
                     const projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
                     width2 = width1*(1+projection_len*3)*Math.min((lerp(pointer1.pressure,pointer2.pressure,t)*1),2);
-                    tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${angle*255/360},${255-lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
-                    tctx.beginPath();
-                    tctx.ellipse(x,y,width1,width2,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
-                    tctx.fill();
+                    dCtx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${angle*255/360},${255-lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
+                    dCtx.beginPath();
+                    dCtx.ellipse(x,y,width1,width2,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
+                    dCtx.fill();
                 }
                 break;
         }
     }
 }
 
+document.querySelectorAll(".toggle").forEach((x)=>{ // トグルボタン
+    x.dataset.stat = x.dataset.stat=="on"? "on": "off";
+    x.onclick = (e)=>{
+        e.target.dataset.stat = e.target.dataset.stat=="off"? "on": "off";
+    }
+})
 document.querySelectorAll("#Eraser").forEach((x)=>{ // トグルボタン - 消しゴム選択
     x.dataset.stat = x.dataset.stat=="on"? "on": "off";
-    x.addEventListener("click",(e)=>{
+    x.onclick = (e)=>{
         e.target.dataset.stat = e.target.dataset.stat=="off"? "on": "off";
         document.querySelector("#PenType").dataset.eraser=e.target.dataset.stat;
-    })
+    }
 })
 document.querySelectorAll("div.singleselectbtn").forEach((singleselect)=>{ // 一つだけ選べるボタン群 - ペン選択
     let buttons = [];
@@ -551,12 +573,12 @@ function openImage() {
     }
     #colorpicker {
         display: inline-block;
-        width: 200px;
-        height: 100%;
+        width: 100%;
+        height: 100px;
     }
-    #linewidth {
+    .range_brushsettings {
         display: inline-block;
-        width: 200px;
+        width: 100%;
     }
     
     button {

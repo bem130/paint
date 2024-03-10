@@ -1,10 +1,4 @@
 function* startEmu(data) {
-    let penType = (()=>{
-        if (document.querySelector("#Eraser").dataset.stat=="on") {
-            return "eraser"
-        }
-        return document.querySelector("#PenType").dataset.value;
-    })();
     for (let pointer of JSON.parse(data)) {
         if (pointer.speed==null) {
             endpath();
@@ -14,7 +8,7 @@ function* startEmu(data) {
             ctx.putImageData(cnv_history[cnv_history.length-1],0,0);
             continue;
         }
-        drawpath(pointer,penType);
+        drawpath(pointer);
         yield;
     }
     endpath();
