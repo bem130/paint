@@ -28,9 +28,10 @@
                             <button data-stat="off" class="toggle" id="Eraser">Eraser</button>
                         </div>
                         <div class="singleselectbtn" id="PenType">
-                            <button data-value="ballpoint1">BallPoint</button>
-                            <button data-value="brush1">Brush</button>
                             <button data-value="pencil1">Pencil</button>
+                            <button data-value="ballpoint1">BallPoint</button>
+                            <button data-value="brush1">InkBrush</button>
+                            <button data-value="brush2">PaintBrush</button>
                         </div>
                     </div>
                     <div class="resizer_splitter"></div>
@@ -200,7 +201,7 @@ function draw(e) {
             x: (e.clientX-rect.left)/(rect.right-rect.left)*cnv.width,
             y: (e.clientY-rect.top)/(rect.bottom-rect.top)*cnv.height,
             time: performance.now(),
-            tiltX: e.pointerType=="pen"?e.tiltX:0,
+            tiltX: e.pointerType=="pen"?e.tiltX:10,
             tiltY: 0,
             twist: e.pointerType=="pen"?e.tiltY:45,
             pressure: e.pointerType=="pen"?e.pressure:0.7,
@@ -245,6 +246,19 @@ function unfinishedlineloop(loop=false) {
         const iarr = new Uint8ClampedArray(x * y * 4).fill(0);
         switch (penType) {
             case "ballpoint1":
+                for (let iy = 0; iy < y; iy++) {
+                    for (let ix = 0; ix < x; ix++) {
+                        const index = (iy*x+ix)*4; // index of position [ix,iy]
+                        if (data.data[index+3]==0) {continue;}
+                        const c = 1;
+                        iarr[index+0] = color[0]; // Red
+                        iarr[index+1] = color[1]; // Green
+                        iarr[index+2] = color[2]; // Blue
+                        iarr[index+3] = c*alpha; // Alpha
+                    }
+                }
+                ctx.globalCompositeOperation = "source-over";
+                break;
             case "brush1":
                 for (let iy = 0; iy < y; iy++) {
                     for (let ix = 0; ix < x; ix++) {
@@ -252,13 +266,29 @@ function unfinishedlineloop(loop=false) {
                         if (data.data[index+3]==0) {continue;}
                         let pos = rotate2d([ix,iy],data.data[index+1]*Math.PI*2/255+Math.PI/4*4)
                         //pos = [ix,iy]
-                        const c = (data.data[index+2]/255)*10+noise.simplex2(pos[0]/1,pos[1]/20)*4+noise.simplex2(pos[0]/2,pos[1]/20)*8+1
+                        const c1 = (data.data[index+2]/255)*10+noise.simplex2(pos[0]/1,pos[1]/20)*8+noise.simplex2(pos[0]/2,pos[1]/20)*7+5;
+                        const c2 = 0.97**(((255-data.data[index+2])/20)-0.3);
+                        iarr[index+0] = color[0]; // Red
+                        iarr[index+1] = color[1]; // Green
+                        iarr[index+2] = color[2]; // Blue
+                        iarr[index+3] = Math.min(Math.max(c1,0.5),1)*Math.min(Math.max(c2,0),1)*alpha; // Alpha
+                    }
+                }
+                ctx.globalCompositeOperation = "source-over";
+                break;
+            case "brush2":
+                for (let iy = 0; iy < y; iy++) {
+                    for (let ix = 0; ix < x; ix++) {
+                        const index = (iy*x+ix)*4; // index of position [ix,iy]
+                        if (data.data[index+3]==0) {continue;}
+                        const c = 1/Math.log((255-data.data[index+2])/20+3)*1.5;
                         iarr[index+0] = color[0]; // Red
                         iarr[index+1] = color[1]; // Green
                         iarr[index+2] = color[2]; // Blue
                         iarr[index+3] = Math.min(Math.max(c,0),1)*alpha; // Alpha
                     }
                 }
+                ctx.globalCompositeOperation = "source-over";
                 break;
             case "pencil1":
                 for (let iy = 0; iy < y; iy++) {
@@ -272,6 +302,7 @@ function unfinishedlineloop(loop=false) {
                         iarr[index+3] = c*alpha; // Alpha
                     }
                 }
+                ctx.globalCompositeOperation = "source-over";
                 break;
         }
         const rcanvas = document.createElement("canvas");
@@ -354,6 +385,7 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
                 }
                 break;
             case "brush1":
+            case "brush2":
                 {
                     tctx.globalCompositeOperation = "lighten";
                     width1 = linewidth*Math.max(lerp(pointer1.pressure,pointer2.pressure,t)**1.2-0.2,0)*(2/Math.log(lerp(pointer1.speed,pointer2.speed,t)+5));
