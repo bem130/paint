@@ -137,17 +137,42 @@ var canvasScale = 0;
 function resize() {
     {
         console.log("resize")
-        let scale = 1.2**canvasScale;
+        let scale = 1.05**canvasScale;
         const dw = imageConfig.width;
         const dh = imageConfig.height;
-        let rw = 0;let rh = 0;
         parent = imgOutArea.getBoundingClientRect();
         let ww = parent.width;
         let wh = parent.height;
-        cnv.style.transform = "scale("+scale.toString()+","+scale.toString()+")";
-        basecnv.style.transform = "scale("+scale.toString()+","+scale.toString()+")";
+        {
+            let ws = (ww-25)/dw;
+            let hs = (wh-25)/dh;
+            console.log(ws,hs)
+            scale *= Math.min(ws,hs);
+        }
         imgOutPadding.style.width = `${dw*scale+20}px`;
         imgOutPadding.style.height = `${dh*scale+20}px`;
+        if (dw*scale+20<=ww&&dh*scale+20<=wh) {
+            console.log("a")
+            cnv.style.transform = "translate(-50%,-50%) scale("+scale.toString()+","+scale.toString()+")";
+            cnv.style.transformOrigin = "center center";
+            cnv.style.left = "50%";
+            cnv.style.top = "50%";
+            basecnv.style.transform = "translate(-50%,-50%) scale("+scale.toString()+","+scale.toString()+")";
+            basecnv.style.transformOrigin = "center center";
+            basecnv.style.left = "50%";
+            basecnv.style.top = "50%";
+        }
+        else {
+            console.log("b")
+            cnv.style.transform = "scale("+scale.toString()+","+scale.toString()+")";
+            cnv.style.transformOrigin = "top left";
+            cnv.style.left = "10px";
+            cnv.style.top = "10px";
+            basecnv.style.transform = "scale("+scale.toString()+","+scale.toString()+")";
+            basecnv.style.transformOrigin = "top left";
+            basecnv.style.left = "10px";
+            basecnv.style.top = "10px";
+        }
     }
 };
 window.onresize = resize;
@@ -215,8 +240,8 @@ imgOutArea.addEventListener("wheel",(e)=>{
         e.preventDefault();
         let wheelval = e.deltaY;
         if (e.deltaY>0) {canvasScale--;}else {canvasScale++;}
-        if (canvasScale>20) {canvasScale=20}
-        else if (canvasScale<-20) {canvasScale=-20}
+        if (canvasScale>50) {canvasScale=50}
+        else if (canvasScale<-50) {canvasScale=-50}
         resize();
     }
 })
@@ -729,6 +754,7 @@ function openImage() {
         left: 10px;
         top: 10px;
         transform-origin: top left;
+        border: 5px solid rgb(255, 157, 0);
     }
     #mainarea {
         height: 100dvh;
