@@ -391,10 +391,11 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth) {
     const span = 0.005*Math.log(linewidth+2);
     let Debug_PointerInformation = document.querySelector("#Debug_PointerInformation").dataset.stat=="on";
     const dCtx = Debug_PointerInformation?ctx:tctx;
+    dCtx.globalCompositeOperation = Debug_PointerInformation?"source-over":"lighten";
     for (let t=0;t<=1;t+=span) {
         const x = (p0.x-2*p1.x+p2.x)*t*t+(-2*p0.x+2*p1.x)*t+p0.x;
         const y = (p0.y-2*p1.y+p2.y)*t*t+(-2*p0.y+2*p1.y)*t+p0.y;
-        let angle = 180-Math.atan2(p2.x-p0.x,p2.y-p0.y)*(180/Math.PI)
+        let angle = 180-Math.atan2(p2.x-p0.x,p2.y-p0.y)*(180/Math.PI);
         switch (penType) {
             case "eraser":
                 {
@@ -407,7 +408,6 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth) {
                 break;
             case "ballpoint1":
                 {
-                    dCtx.globalCompositeOperation = "lighten";
                     width1 = linewidth*Math.min((lerp(pointer1.pressure,pointer2.pressure,t)+0.5)**2,1);
                     width2 = width1;
                     dCtx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${angle*255/360},${255-lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
@@ -419,7 +419,6 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth) {
             case "brush1":
             case "brush2":
                 {
-                    dCtx.globalCompositeOperation = "lighten";
                     width1 = linewidth*Math.max(lerp(pointer1.pressure,pointer2.pressure,t)**1.2-0.2,0)*(2/Math.log(lerp(pointer1.speed,pointer2.speed,t)+5));
                     const projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
                     width2 = width1*(1.5+projection_len*7);
@@ -431,7 +430,6 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth) {
                 break;
             case "pencil1":
                 {
-                    dCtx.globalCompositeOperation = "lighten";
                     width1 = linewidth*Math.min(Math.max(lerp(pointer1.pressure,pointer2.pressure,t)-0.1,0),1);
                     const projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
                     width2 = width1*(1+projection_len*3)*Math.min((lerp(pointer1.pressure,pointer2.pressure,t)*1),2);
