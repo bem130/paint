@@ -14,7 +14,8 @@
                     <div class="resizer_content" id="imgOutArea"><canvas id="base"></canvas><canvas id="canvas"></canvas></div>
                     <div class="resizer_splitter"></div>
                     <div class="resizer_content">
-                        
+                        <div id="colorpalette" class="singleselectbtn">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -40,7 +41,6 @@
                                     <div class="resizer_content">
                                         <input type="range" id="linewidth" min="-15" max="30" value="0" class="range_brushsettings">
                                         <input type="range" id="alpha" min="0" max="255" value="255" class="range_brushsettings">
-                                        <input type="color" id="colorpicker">
                                         <div>
                                             <button data-stat="off" class="toggle" id="Debug_PointerInformation">Debug - Pointer information</button>
                                         </div>
@@ -72,6 +72,7 @@
     </body>
 </html>
 <script src="https://cdn.jsdelivr.net/npm/noisejs@2.1.0/index.min.js"></script>
+<script src="color_conversion.js"></script>
 <script src="penemulator.js"></script>
 <script>
 function resizer_Vcontainer_addEL (container,framesMin,callback=()=>{}) {
@@ -262,7 +263,7 @@ function unfinishedlineloop(loop=false) {
         ctx.putImageData(cnv_history[cnv_history.length-1],0,0);
         const x = cnv.width;
         const y = cnv.height;
-        const color = document.querySelector("#colorpicker").value.slice(1).match(/.{2}/g).map((x)=>{return parseInt(x,16)});
+        const color = hsv2rgb(...document.querySelector("#colorpalette").dataset.value.split(",").map((x)=>{return Number(x);}));
         const alpha = Number(document.querySelector("#alpha").value);
     startTime = performance.now();
         const data = tctx.getImageData(0,0,x,y);
@@ -443,12 +444,52 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth) {
     }
 }
 
+
+let colorPalette = [
+    [0,0,0],
+    [0,100,50],
+    [120,100,50],
+    [240,100,50],
+]
+{
+    let cpelm = document.querySelector("#colorpalette");
+    for (let i of colorPalette) {
+        let belm = document.createElement("button");
+        belm.dataset.value = i.join(",");
+        belm.style.backgroundColor = `rgb(${hsv2rgb(...i).join(",")})`;
+        let selm = document.createElement("span");
+        selm.innerText = i.join(",");
+        belm.appendChild(selm);
+        cpelm.appendChild(belm);
+    }
+}
+
 document.querySelectorAll(".toggle").forEach((x)=>{ // トグルボタン
     x.dataset.stat = x.dataset.stat=="on"? "on": "off";
     x.onclick = (e)=>{
         e.target.dataset.stat = e.target.dataset.stat=="off"? "on": "off";
     }
 })
+document.querySelectorAll("div.singleselectbtn").forEach((singleselect)=>{ // 一つだけ選べるボタン群
+    let buttons = [];
+    for (let button of singleselect.querySelectorAll(":scope > button")) {
+        buttons.push(button);
+    }
+    console.log(buttons)
+    for (let button of buttons) {
+        button.onclick = (e)=>{
+            for (let button of buttons) {
+                button.dataset.stat="off";
+            }
+            button.dataset.stat="on";
+            singleselect.dataset.value=button.dataset.value;
+        }
+        button.dataset.stat="off";
+    }
+    buttons[0].dataset.stat="on";
+    singleselect.dataset.value=buttons[0].dataset.value;
+})
+
 document.querySelectorAll("#Eraser").forEach((x)=>{ // トグルボタン - 消しゴム選択
     x.dataset.stat = x.dataset.stat=="on"? "on": "off";
     x.onclick = (e)=>{
@@ -463,7 +504,7 @@ document.querySelectorAll("div.singleselectbtn").forEach((singleselect)=>{ // �
     }
     console.log(buttons)
     for (let button of buttons) {
-        button.addEventListener("click",(e)=>{
+        button.onclick = (e)=>{
             for (let button of buttons) {
                 button.dataset.stat="off";
             }
@@ -471,7 +512,7 @@ document.querySelectorAll("div.singleselectbtn").forEach((singleselect)=>{ // �
             singleselect.dataset.value=button.dataset.value;
             document.querySelector("#Eraser").dataset.stat="off"; // 消しゴムは無効化
             singleselect.dataset.eraser="off"
-        })
+        }
         button.dataset.stat="off";
     }
     buttons[0].dataset.stat="on";
@@ -553,6 +594,7 @@ function openImage() {
 <style>
     body {
         background-color: rgb(21, 10, 0);
+        color: white;
         position: fixed;
         padding: 0;
         margin: 0;
@@ -601,6 +643,34 @@ function openImage() {
         background-color: rgb(172, 151, 151);
         &:hover {
             background-color: rgb(181, 172, 172);
+        }
+    }
+    
+    #colorpalette {
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        margin: 0px;
+        padding: 0px;
+        & > * {
+            width: 10%;
+            height: 30px;
+            margin: 0.2%;
+            padding: 0.5%;
+            border: 1px solid rgba(0, 0, 0);
+            border-radius: 10px;
+            & > span {
+                background-color: rgba(128, 128, 128, 0.6);
+                border-radius: 3px;
+                color: white;
+                padding: 2px;
+            }
+            &:hover {
+                box-shadow: 0px 0px 3px 2px rgb(255, 255, 255,0.5);
+            }
+            &[data-stat="on"] {
+                box-shadow: 0px 0px 3px 3px rgb(255, 255, 255,0.7);
+            }
         }
     }
 </style>
