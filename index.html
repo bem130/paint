@@ -35,7 +35,7 @@
                     </div>
                     <div class="resizer_splitter"></div>
                     <div class="resizer_content">
-                        <button onclick="copyImage()">Copy Image</button>
+                        <button onclick="openImage()">Open Image</button>
                     </div>
                 </div>
             </div>
@@ -203,7 +203,7 @@ function draw(e) {
             tiltX: e.pointerType=="pen"?e.tiltX:0,
             tiltY: 0,
             twist: e.pointerType=="pen"?e.tiltY:45,
-            pressure: e.pointerType=="pen"?e.pressure:0.5,
+            pressure: e.pointerType=="pen"?e.pressure:0.7,
             pointerType: e.pointerType,
             speed: speed,
         }
@@ -250,11 +250,13 @@ function unfinishedlineloop(loop=false) {
                     for (let ix = 0; ix < x; ix++) {
                         const index = (iy*x+ix)*4; // index of position [ix,iy]
                         if (data.data[index+3]==0) {continue;}
-                        const c = 1;
+                        let pos = rotate2d([ix,iy],data.data[index+1]*Math.PI*2/255+Math.PI/4*4)
+                        //pos = [ix,iy]
+                        const c = (data.data[index+2]/255)*10+noise.simplex2(pos[0]/1,pos[1]/20)*4+noise.simplex2(pos[0]/2,pos[1]/20)*8+1
                         iarr[index+0] = color[0]; // Red
                         iarr[index+1] = color[1]; // Green
                         iarr[index+2] = color[2]; // Blue
-                        iarr[index+3] = c*alpha; // Alpha
+                        iarr[index+3] = Math.min(Math.max(c,0),1)*alpha; // Alpha
                     }
                 }
                 break;
@@ -277,7 +279,7 @@ function unfinishedlineloop(loop=false) {
         rcanvas.height = y;
         rcanvas.getContext("2d",{willReadFrequently:true}).putImageData(new ImageData(iarr,x,y),0,0);
         ctx.drawImage(rcanvas,0,0);
-        console.log("draw",endTime-startTime);
+        console.log("draw");
     }
     if (loop) {
         setTimeout(unfinishedlineloop,10,true);
@@ -318,12 +320,18 @@ function midpoint(p1,p2) {
 function lerp(a,b,t) {
     return a + t*(b-a)
 }
+function rotate2d(p,a) {
+    const sin = Math.sin(a);
+    const cos = Math.cos(a);
+    return [p[0]*cos-p[1]*sin,p[0]*sin+p[1]*cos];
+}
 
 function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
     const span = 0.005*Math.log(linewidth+2);
     for (let t=0;t<=1;t+=span) {
-        x = (p0.x-2*p1.x+p2.x)*t*t+(-2*p0.x+2*p1.x)*t+p0.x;
-        y = (p0.y-2*p1.y+p2.y)*t*t+(-2*p0.y+2*p1.y)*t+p0.y;
+        const x = (p0.x-2*p1.x+p2.x)*t*t+(-2*p0.x+2*p1.x)*t+p0.x;
+        const y = (p0.y-2*p1.y+p2.y)*t*t+(-2*p0.y+2*p1.y)*t+p0.y;
+        let angle = 180-Math.atan2(p2.x-p0.x,p2.y-p0.y)*(180/Math.PI)
         switch (penType) {
             case "eraser":
                 {
@@ -339,7 +347,7 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
                     tctx.globalCompositeOperation = "lighten";
                     width1 = linewidth*Math.min((lerp(pointer1.pressure,pointer2.pressure,t)+0.5)**2,1);
                     width2 = width1;
-                    tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${lerp(pointer1.twist,pointer2.twist,t)/10},${lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
+                    tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${angle*255/360},${255-lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
                     tctx.beginPath();
                     tctx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
                     tctx.fill();
@@ -348,10 +356,10 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
             case "brush1":
                 {
                     tctx.globalCompositeOperation = "lighten";
-                    width1 = linewidth*lerp(pointer1.pressure,pointer2.pressure,t)**1.4;
+                    width1 = linewidth*Math.max(lerp(pointer1.pressure,pointer2.pressure,t)**1.2-0.2,0)*(2/Math.log(lerp(pointer1.speed,pointer2.speed,t)+5));
                     const projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
                     width2 = width1*(1.5+projection_len*7);
-                    tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${lerp(pointer1.twist,pointer2.twist,t)/10},${lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
+                    tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${angle*255/360},${255-lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
                     tctx.beginPath();
                     tctx.ellipse(x,y,width2,width1,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
                     tctx.fill();
@@ -360,10 +368,10 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
             case "pencil1":
                 {
                     tctx.globalCompositeOperation = "lighten";
-                    width1 = linewidth*Math.min((lerp(pointer1.pressure,pointer2.pressure,t)*1),1);
+                    width1 = linewidth*Math.min(Math.max(lerp(pointer1.pressure,pointer2.pressure,t)-0.1,0),1);
                     const projection_len = Math.sqrt(Math.cos((lerp(pointer1.tiltX,pointer2.tiltX,t)+90)*Math.PI/180)**2+Math.cos((lerp(pointer1.tiltY,pointer2.tiltY,t)+90)*Math.PI/180)**2);
                     width2 = width1*(1+projection_len*3)*Math.min((lerp(pointer1.pressure,pointer2.pressure,t)*1),2);
-                    tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${lerp(pointer1.twist,pointer2.twist,t)/10},${lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
+                    tctx.fillStyle = `rgb(${lerp(pointer1.pressure,pointer2.pressure,t)*255},${angle*255/360},${255-lerp(pointer1.speed,pointer2.speed,t)*20},1)`;
                     tctx.beginPath();
                     tctx.ellipse(x,y,width1,width2,lerp(pointer1.twist,pointer2.twist,t)*Math.PI/180,0,Math.PI*2)
                     tctx.fill();
@@ -407,37 +415,50 @@ function makebase() {
     const y = imageConfig.height;
     noise = new Noise(Math.random());
     let iarr = new Uint8ClampedArray(x * y * 4);
-    const color = [250,248,245];
-    for (iy = 0; iy < y; iy++) {
-        for (ix = 0; ix < x; ix++) {
-            c = noise.simplex2(ix*1,iy*1)*10+noise.simplex2(ix/10+10,iy/10+10)*3+noise.simplex2(iy/1000+15,ix/500+15)*10
-            index = (iy*x+ix)*4; // index of position [ix,iy]
-            iarr[index+0] = c+color[0]; // Red
-            iarr[index+1] = c+color[1]; // Green
-            iarr[index+2] = c+color[2]; // Blue
-            iarr[index+3] = 255; // Alpha
+    { // 下地
+        const color = [250,248,245];
+        for (let iy = 0; iy < y; iy++) {
+            for (let ix = 0; ix < x; ix++) {
+                c = noise.simplex2(ix*1,iy*1)*10+noise.simplex2(ix/10+10,iy/10+10)*3+noise.simplex2(iy/1000+15,ix/500+15)*10
+                index = (iy*x+ix)*4; // index of position [ix,iy]
+                iarr[index+0] = c+color[0]; // Red
+                iarr[index+1] = c+color[1]; // Green
+                iarr[index+2] = c+color[2]; // Blue
+                iarr[index+3] = 255; // Alpha
+            }
         }
     }
     const basectx = basecnv.getContext("2d");
     basectx.putImageData(new ImageData(iarr,x,y),0,0);
+    { // 罫線
+        const color = [105,100,150];
+        for (let ix=0;ix<x;ix+=2){
+            for (let iy=0;iy<y;iy+=100) {
+                basectx.fillStyle = `rgb(${color.join(",")},0.5)`;
+                width1 = noise.simplex2(ix/10,iy/10)*0.2+1;
+                basectx.beginPath();
+                basectx.arc(ix,iy,width1,0,Math.PI*2);
+                basectx.fill();
+            }
+        }
+    }
 }
 
 
 
-function copyImage() {
-    if (typeof ClipboardItem=="undefined") {alert("Clipboard item not supported on your browser")}
+function openImage() {
     const x = cnv.width;
     const y = cnv.height;
-    const tcanvas = document.createElement("canvas");
-    tcanvas.width = x;
-    tcanvas.height = y;
-    tctx = tcanvas.getContext("2d");
+    tmpcnv.height = imageConfig.height;
+    tmpcnv.width = imageConfig.width;
     tctx.putImageData(new ImageData(basecnv.getContext("2d").getImageData(0,0,x,y).data,x,y),0,0);
     tctx.drawImage(cnv,0,0);
-    tcanvas.toBlob(async (blob) => {
-        const item = new ClipboardItem({'image/png': blob });
-        await navigator.clipboard.write([item]);
-    });
+    {
+        let data = tmpcnv.toDataURL("image/png")
+        const newTab = window.open();
+        newTab.document.write(`<img src="${data}">`);
+        newTab.document.close();
+    }
     tctx.clearRect(0,0,imageConfig.width,imageConfig.height);
 }
 </script>

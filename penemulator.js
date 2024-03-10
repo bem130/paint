@@ -20,9 +20,9 @@ function* startEmu(data) {
     endpath();
 }
 var playbackId;
-async function playbackFile(path) {
+async function playbackFile(path,clear=true) {
     playbackId = Math.floor(Math.random()*100000);
-    init();
+    if (clear) {init();}
     let res = await fetch("./pointerTrajectory/"+path,{cache:"reload"});
     let text = await res.text();
     let gen = startEmu(text);
