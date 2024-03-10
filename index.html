@@ -11,7 +11,13 @@
         <div class="resizer_Hcontainer" id="mainarea" data-proportion="6:1">
             <div class="resizer_content">
                 <div class="resizer_Vcontainer" data-proportion="4:1">
-                    <div class="resizer_content" id="imgOutArea"><canvas id="base"></canvas><canvas id="canvas"></canvas></div>
+                    <div class="resizer_content">
+                        <div id="imgOutArea">
+                            <div id="imgOutPadding"></div>
+                            <canvas id="base"></canvas>
+                            <canvas id="canvas"></canvas>
+                        </div>
+                    </div>
                     <div class="resizer_splitter"></div>
                     <div class="resizer_content">
                         <div class="resizer_Hcontainer" data-proportion="1:7">
@@ -127,32 +133,21 @@ function resizer_Hcontainer_addEL (container,framesMin,callback=()=>{}) {
 }
 document.querySelectorAll(".resizer_Vcontainer").forEach((x)=>{resizer_Vcontainer_addEL(x,50,resize);})
 document.querySelectorAll(".resizer_Hcontainer").forEach((x)=>{resizer_Hcontainer_addEL(x,50,resize);})
+var canvasScale = 0;
 function resize() {
     {
+        console.log("resize")
+        let scale = 1.2**canvasScale;
         const dw = imageConfig.width;
         const dh = imageConfig.height;
         let rw = 0;let rh = 0;
         parent = imgOutArea.getBoundingClientRect();
         let ww = parent.width;
         let wh = parent.height;
-        let csc = 1
-        hcsc = ww/dw; wcsc = wh/dh;
-        if (hcsc>wcsc) {
-            csc = wcsc; rw = (ww - dw*csc)/2;
-        }
-        else {
-            csc = hcsc; rh = (wh - dh*csc)/2;
-        }
-        cnv.style.marginTop = (rh).toString()+"px";
-        cnv.style.marginBottom = (rh).toString()+"px";
-        cnv.style.marginLeft = (rw).toString()+"px";
-        cnv.style.marginRight = (rw).toString()+"px";
-        cnv.style.transform = "scale("+csc.toString()+","+csc.toString()+")";
-        basecnv.style.marginTop = (rh).toString()+"px";
-        basecnv.style.marginBottom = (rh).toString()+"px";
-        basecnv.style.marginLeft = (rw).toString()+"px";
-        basecnv.style.marginRight = (rw).toString()+"px";
-        basecnv.style.transform = "scale("+csc.toString()+","+csc.toString()+")";
+        cnv.style.transform = "scale("+scale.toString()+","+scale.toString()+")";
+        basecnv.style.transform = "scale("+scale.toString()+","+scale.toString()+")";
+        imgOutPadding.style.width = `${dw*scale+20}px`;
+        imgOutPadding.style.height = `${dh*scale+20}px`;
     }
 };
 window.onresize = resize;
@@ -188,6 +183,7 @@ const tctx = tmpcnv.getContext("2d",{willReadFrequently:true});
 const cnv = document.getElementById("canvas");
 const ctx = cnv.getContext("2d",{willReadFrequently:true});
 const imgOutArea = document.getElementById("imgOutArea");
+const imgOutPadding = document.getElementById("imgOutPadding");
 // resize window
 
 cnv.addEventListener("contextmenu", (e)=>{e.preventDefault();}, false);
@@ -214,6 +210,16 @@ document.addEventListener("keydown",(e)=>{
         e.preventDefault();
     }
 },false);
+imgOutArea.addEventListener("wheel",(e)=>{
+    if (e.ctrlKey) {
+        e.preventDefault();
+        let wheelval = e.deltaY;
+        if (e.deltaY>0) {canvasScale--;}else {canvasScale++;}
+        if (canvasScale>20) {canvasScale=20}
+        else if (canvasScale<-20) {canvasScale=-20}
+        resize();
+    }
+})
 
 function logEvents(e) {
     console.log(e);
@@ -708,12 +714,20 @@ function openImage() {
         padding: 0;
         margin: 0;
     }
+    #imgOutArea {
+        height: 100%;
+        width: 100%;
+        overflow: auto;
+        position: relative;
+        padding: 0;
+        margin: 0;
+    }
     #imgOutArea>canvas {
         cursor: crosshair;
         touch-action: none;
         position: absolute;
-        left: 2px;
-        top: 0;
+        left: 10px;
+        top: 10px;
         transform-origin: top left;
     }
     #mainarea {
