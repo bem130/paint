@@ -250,7 +250,7 @@ function unfinishedlineloop(loop=false) {
         }
         return document.querySelector("#PenType").dataset.value;
     })();
-    if (stroke.length>3) {
+    if (stroke.length>3&&penType!="eraser") {
         ctx.putImageData(cnv_history[cnv_history.length-1],0,0);
         const x = cnv.width;
         const y = cnv.height;
@@ -259,7 +259,6 @@ function unfinishedlineloop(loop=false) {
     startTime = performance.now();
         const data = tctx.getImageData(0,0,x,y);
     endTime = performance.now();
-        if (penType=="eraser") {ctx.drawImage(tmpcnv,0,0); return;}
         const iarr = new Uint8ClampedArray(x * y * 4).fill(0);
         switch (penType) {
             case "ballpoint1":
@@ -383,11 +382,11 @@ function drawQuadraticCurve(p0,p1,p2,pointer1,pointer2,linewidth,penType) {
         switch (penType) {
             case "eraser":
                 {
-                    tctx.globalCompositeOperation = "destination-out";
-                    tctx.beginPath();
-                    tctx.arc(x,y,linewidth,0,Math.PI*2)
-                    tctx.fill();
-                    tctx.fillStyle = `rgb(0,0,0,1)`;
+                    ctx.globalCompositeOperation = "destination-out";
+                    ctx.fillStyle = `rgb(0,0,0,1)`;
+                    ctx.beginPath();
+                    ctx.arc(x,y,linewidth,0,Math.PI*2)
+                    ctx.fill();
                 }
                 break;
             case "ballpoint1":
