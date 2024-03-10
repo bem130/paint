@@ -214,6 +214,9 @@ const imgOutPadding = document.getElementById("imgOutPadding");
 cnv.addEventListener("contextmenu", (e)=>{e.preventDefault();}, false);
 
 cnv.addEventListener("pointermove", draw, false);
+cnv.addEventListener("pointerdown", (e)=>{
+    e.target.setPointerCapture(e.pointerId);
+}, false);
 
 cnv.addEventListener("pointerup", endpath, false);
 cnv.addEventListener("pointercancle", endpath, false);
